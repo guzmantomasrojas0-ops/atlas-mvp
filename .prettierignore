@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+src/generated
+prisma/migrations
+package-lock.json
+
+# documentación de producto, no código — no reformatear
+PLAN.md
+README.md
+~$PLAN.md

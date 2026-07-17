@@ -1,0 +1,133 @@
+// Prisma schema — Fase 0 (fundaciones).
+//
+// Estos modelos son deliberadamente mínimos: solo el esqueleto de relaciones
+// necesario para que la arquitectura multi-tenant descrita en PLAN.md sea
+// válida desde el día uno. Los campos de negocio (precios, horarios, estados,
+// contenido de mensajes, etc.) se agregan fase a fase, no acá.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// El tenant: un negocio (barbería, salón, clínica) que usa ATLAS.
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staffMembers  StaffMember[]
+  services      Service[]
+  clients       Client[]
+  appointments  Appointment[]
+  conversations Conversation[]
+
+  @@map("businesses")
+}
+
+/// Un miembro del equipo del negocio.
+model StaffMember {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([businessId])
+  @@map("staff_members")
+}
+
+/// Un servicio que el negocio ofrece (ej. "Corte de pelo").
+model Service {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([businessId])
+  @@map("services")
+}
+
+/// Un cliente final del negocio.
+model Client {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([businessId])
+  @@map("clients")
+}
+
+/// Una cita agendada. El núcleo transaccional del dominio de scheduling.
+model Appointment {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  staffId    String
+  staff      StaffMember @relation(fields: [staffId], references: [id])
+  serviceId  String
+  service    Service @relation(fields: [serviceId], references: [id])
+  clientId   String
+  client     Client @relation(fields: [clientId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([staffId])
+  @@map("appointments")
+}
+
+/// Una conversación entre un cliente final y ATLAS, en algún canal.
+model Conversation {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages     Message[]
+  agentActions AgentAction[]
+
+  @@index([businessId])
+  @@map("conversations")
+}
+
+/// Un mensaje individual dentro de una conversación.
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+/// Registro de auditoría de una acción ejecutada por el agente
+/// (qué se pidió, qué se ejecutó) dentro de una conversación.
+model AgentAction {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@map("agent_actions")
+}
