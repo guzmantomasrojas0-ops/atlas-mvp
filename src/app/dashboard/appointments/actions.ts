@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 import { ForbiddenError, requireRole, requireSession } from "@/lib/session";
 import {
   AppointmentNotFoundError,
@@ -48,6 +49,7 @@ export async function createAppointmentAction(
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá los datos ingresados." };
     }
+    logger.error({ error }, "createAppointmentAction: error inesperado guardando la reserva.");
     return { success: false, error: "No se pudo guardar la reserva. Intentá de nuevo." };
   }
 
@@ -67,6 +69,7 @@ export async function cancelAppointmentAction(
     if (error instanceof AppointmentNotFoundError) {
       return { success: false, error: error.message };
     }
+    logger.error({ error, appointmentId }, "cancelAppointmentAction: error inesperado cancelando la reserva.");
     return { success: false, error: "No se pudo cancelar la reserva. Intentá de nuevo." };
   }
 
@@ -106,6 +109,7 @@ export async function confirmPaymentAction(
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá los datos del pago." };
     }
+    logger.error({ error, appointmentId }, "confirmPaymentAction: error inesperado confirmando el pago.");
     return { success: false, error: "No se pudo confirmar el pago. Intentá de nuevo." };
   }
 
@@ -132,6 +136,7 @@ export async function revertPaymentAction(
     if (error instanceof PaymentAppointmentNotFoundError || error instanceof NoActivePaymentError) {
       return { success: false, error: error.message };
     }
+    logger.error({ error, appointmentId }, "revertPaymentAction: error inesperado revirtiendo el pago.");
     return { success: false, error: "No se pudo revertir el pago. Intentá de nuevo." };
   }
 
@@ -167,6 +172,10 @@ export async function rescheduleAppointmentAction(
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá la fecha y el horario." };
     }
+    logger.error(
+      { error, appointmentId },
+      "rescheduleAppointmentAction: error inesperado reprogramando la reserva.",
+    );
     return { success: false, error: "No se pudo reprogramar la reserva. Intentá de nuevo." };
   }
 

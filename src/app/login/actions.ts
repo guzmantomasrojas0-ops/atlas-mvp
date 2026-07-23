@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 import { setSessionCookie } from "@/lib/session";
 import {
   InvalidCredentialsError,
@@ -23,6 +24,7 @@ export async function loginAction(input: LoginInput): Promise<LoginActionResult>
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá los datos ingresados." };
     }
+    logger.error({ error }, "loginAction: error inesperado iniciando sesión.");
     return { success: false, error: "No se pudo iniciar sesión. Intentá de nuevo." };
   }
 

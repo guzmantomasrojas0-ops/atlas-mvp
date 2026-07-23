@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 import { ForbiddenError, requireRole } from "@/lib/session";
 import { createService, type ServiceInput } from "@/modules/catalog";
 
@@ -23,6 +24,7 @@ export async function createServiceAction(input: ServiceInput): Promise<CreateSe
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá los datos ingresados." };
     }
+    logger.error({ error }, "createServiceAction: error inesperado guardando el servicio.");
     return { success: false, error: "No se pudo guardar el servicio. Intentá de nuevo." };
   }
 

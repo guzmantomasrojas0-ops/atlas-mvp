@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
+import { logger } from "@/lib/logger";
 import { requireSession } from "@/lib/session";
 import { markAsRead, sendMessage } from "@/modules/conversation";
 
@@ -19,6 +20,7 @@ export async function sendMessageAction(
     if (error instanceof ZodError) {
       return { success: false, error: "Escribí un mensaje válido." };
     }
+    logger.error({ error }, "sendMessageAction: error inesperado enviando el mensaje.");
     return { success: false, error: "No se pudo enviar el mensaje. Intentá de nuevo." };
   }
 
@@ -36,7 +38,8 @@ export async function markConversationReadAction(conversationId: string): Promis
 
   try {
     await markAsRead(business.id, conversationId);
-  } catch {
+  } catch (error) {
+    logger.error({ error, conversationId }, "markConversationReadAction: no se pudo marcar como leída.");
     return;
   }
 
