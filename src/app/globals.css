@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Acento de marca — violeta/índigo técnico, usado para acciones primarias,
+     foco y estados activos. Sin cambios de paleta entre temas: ya es lo
+     bastante vibrante para leerse bien sobre fondo oscuro. */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ece8fe;
+  --color-brand-200: #dad0fd;
+  --color-brand-300: #bfaefa;
+  --color-brand-400: #9f83f5;
+  --color-brand-500: #7c5cf0;
+  --color-brand-600: #6640e0;
+  --color-brand-700: #5433bd;
+  --color-brand-800: #442a97;
+  --color-brand-900: #392577;
+  --color-brand-950: #221546;
+
+  /*
+   * Tokens semánticos del tema oscuro (por defecto, sin toggle todavía).
+   * Todo componente usa estos nombres (bg-background, bg-card, text-foreground,
+   * text-muted-foreground, border-border, bg-muted) en vez de un tono de zinc
+   * literal — así el tema entero se ajusta desde acá, un solo lugar, en vez
+   * de auditar cada componente si algún día cambia la paleta.
+   */
+  --color-background: var(--color-zinc-950);
+  --color-card: var(--color-zinc-900);
+  --color-card-hover: var(--color-zinc-800);
+  --color-muted: var(--color-zinc-800);
+  --color-border: var(--color-zinc-800);
+  --color-border-strong: var(--color-zinc-700);
+  --color-foreground: var(--color-zinc-50);
+  --color-muted-foreground: var(--color-zinc-400);
+
+  /* Sombras suaves y multi-capa — sobre fondo oscuro pesan más que en claro,
+     así que son más sutiles y se apoyan en un halo de brillo, no solo sombra. */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-floating: 0 4px 6px -2px rgba(0, 0, 0, 0.35), 0 12px 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-floating-hover: 0 6px 10px -3px rgba(0, 0, 0, 0.4), 0 20px 32px -6px rgba(0, 0, 0, 0.55);
+
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::selection {
+  background-color: var(--color-brand-800);
+  color: var(--color-brand-50);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-zinc-700);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-zinc-600);
 }
