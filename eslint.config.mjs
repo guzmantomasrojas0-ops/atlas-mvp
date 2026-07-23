@@ -23,6 +23,14 @@ const eslintConfig = [
       "test-results/**",
     ],
   },
+  {
+    rules: {
+      // Un parámetro con prefijo "_" es intencionalmente no usado todavía
+      // (por ejemplo, `config` en un provider simulado que lo va a
+      // necesitar recién cuando conecte credenciales reales).
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
+  },
 ];
 
 export default eslintConfig;
