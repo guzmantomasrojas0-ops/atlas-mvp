@@ -1,4 +1,31 @@
-// Punto de entrada público del módulo scheduling.
-// Solo lo exportado acá es visible para el resto de la aplicación (ver convenciones en PLAN.md).
-// Fase 0: sin implementación todavía.
-export {};
+export {
+  appointmentInputSchema,
+  AppointmentNotFoundError,
+  InvalidReferenceError,
+  isWithinBusinessHours,
+  OutsideBusinessHoursError,
+  rescheduleAppointmentInputSchema,
+  SchedulingConflictError,
+  findAvailableSlots,
+  findConflict,
+  formatInBusinessTimezone,
+  rangesOverlap,
+  toBusinessLocalTime,
+  toUtcInstant,
+} from "./domain";
+export type { AppointmentInput, RescheduleAppointmentInput, TimeRange } from "./domain";
+export {
+  cancelAppointment,
+  createAppointment,
+  createAppointmentForClient,
+  getAppointmentsByClient,
+  listAppointments,
+  rescheduleAppointment,
+  searchAvailability,
+} from "./service";
+export type {
+  AppointmentListItem,
+  CreatedAppointment,
+  CreateAppointmentForClientInput,
+  StaffAvailability,
+} from "./service";

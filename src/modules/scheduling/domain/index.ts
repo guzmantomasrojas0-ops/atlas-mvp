@@ -1,3 +1,7 @@
-// Módulo scheduling — capa de dominio (tipos y reglas puras).
-// Fase 0: sin lógica de negocio todavía. Se implementa en fases posteriores (ver PLAN.md).
-export {};
+export * from "./availability";
+export * from "./calendar-range";
+export * from "./constants";
+export * from "./errors";
+export * from "./event-layout";
+export * from "./schema";
+export * from "./timezone";

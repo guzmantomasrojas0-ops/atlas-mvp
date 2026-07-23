@@ -1,3 +1,2 @@
-// Módulo scheduling — capa de datos (repositorio Prisma).
-// Fase 0: sin implementación todavía.
-export {};
+export * from "./appointment-repository";
+export * from "./client-repository";
