@@ -1,3 +1,1 @@
-// Módulo business — capa de datos (repositorio Prisma).
-// Fase 0: sin implementación todavía.
-export {};
+export * from "./business-repository";

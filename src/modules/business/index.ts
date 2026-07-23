@@ -1,4 +1,3 @@
-// Punto de entrada público del módulo business.
-// Solo lo exportado acá es visible para el resto de la aplicación (ver convenciones en PLAN.md).
-// Fase 0: sin implementación todavía.
-export {};
+export { BUSINESS_TYPES, businessTypeLabels, businessInputSchema } from "./domain";
+export type { BusinessInput } from "./domain";
+export { createBusiness, getFirstBusiness } from "./service";
