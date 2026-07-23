@@ -1,4 +1,4 @@
-import type { AIService, ChatMessage, ToolDefinition, ToolResult } from "@/modules/ai";
+import type { AIService, ChatMessage, ToolDefinition, ToolResult, Usage } from "@/modules/ai";
 import type { AgentContext } from "./context";
 import { executeTool, type ToolExecutionResult } from "./execution";
 import { applyToolContextDefaults } from "./tool-bridge";
@@ -46,6 +46,8 @@ export interface ConversationLoopResult {
   steps: ConversationLoopStep[];
   stopReason: ConversationLoopStopReason;
   messages: ChatMessage[];
+  /** Suma del `usage` de cada llamada al modelo en este turno — el costo real, no una estimación. */
+  usage: Usage;
 }
 
 export interface ConversationLoopDependencies {
@@ -73,6 +75,14 @@ function toolCallSignature(name: string, args: Record<string, unknown>): string 
   return `${name}:${JSON.stringify(args)}`;
 }
 
+function addUsage(total: Usage, next: Usage): Usage {
+  return {
+    promptTokens: total.promptTokens + next.promptTokens,
+    completionTokens: total.completionTokens + next.completionTokens,
+    totalTokens: total.totalTokens + next.totalTokens,
+  };
+}
+
 /**
  * El loop conversacional: manda el historial + las tools disponibles al
  * mismo modelo en cada vuelta — nunca uno para clasificar y otro para
@@ -90,6 +100,7 @@ export async function runConversationLoop(
   const messages = [...initialMessages];
   const steps: ConversationLoopStep[] = [];
   const toolCallCounts = new Map<string, number>();
+  let usage: Usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
   for (let iteration = 0; iteration < limits.maxIterations; iteration++) {
     const response = await deps.aiService.complete({
@@ -97,14 +108,15 @@ export async function runConversationLoop(
       tools: deps.toolDefinitions,
       toolChoice: "auto",
     });
+    usage = addUsage(usage, response.usage);
 
     if (response.toolCalls.length === 0) {
       const content = response.message.content?.trim();
       if (!content) {
-        return { response: null, steps, stopReason: "empty_response", messages };
+        return { response: null, steps, stopReason: "empty_response", messages, usage };
       }
       messages.push({ role: "assistant", content });
-      return { response: content, steps, stopReason: "final_response", messages };
+      return { response: content, steps, stopReason: "final_response", messages, usage };
     }
 
     messages.push(response.message);
@@ -114,7 +126,7 @@ export async function runConversationLoop(
       const timesSeen = (toolCallCounts.get(signature) ?? 0) + 1;
 
       if (timesSeen > limits.maxRepeatedToolCalls) {
-        return { response: null, steps, stopReason: "repeated_tool_call", messages };
+        return { response: null, steps, stopReason: "repeated_tool_call", messages, usage };
       }
       toolCallCounts.set(signature, timesSeen);
 
@@ -126,5 +138,5 @@ export async function runConversationLoop(
     }
   }
 
-  return { response: null, steps, stopReason: "max_iterations", messages };
+  return { response: null, steps, stopReason: "max_iterations", messages, usage };
 }

@@ -14,9 +14,15 @@ export const runtime = "nodejs";
  * pendiente" en `notifications/service.ts`.
  */
 export async function POST(request: Request): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
+
   const expectedSecret = process.env.CRON_SECRET;
   if (!expectedSecret) {
-    logger.error("CRON_SECRET no está configurado — no se puede autenticar al scheduler.");
+    logger.error(
+      { requestId },
+      "CRON_SECRET no está configurado — no se puede autenticar al scheduler.",
+    );
     return new Response("CRON_SECRET no configurado.", { status: 500 });
   }
 
@@ -36,6 +42,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const summary = await runDueNotifications(business, new Date());
-  logger.info(summary, "Corrida de notificaciones completada.");
-  return Response.json(summary);
+  logger.info(
+    { ...summary, requestId, durationMs: Date.now() - startedAt },
+    "Corrida de notificaciones completada.",
+  );
+  return Response.json(summary, { headers: { "x-request-id": requestId } });
 }

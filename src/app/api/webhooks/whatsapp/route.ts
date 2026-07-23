@@ -49,14 +49,20 @@ export async function GET(request: Request): Promise<Response> {
  * Messaging Gateway del Sprint 15 — nada de esto conoce al Agent.
  */
 export async function POST(request: Request): Promise<Response> {
+  // Un id por evento entrante — Meta no manda uno propio reutilizable, así
+  // que las líneas de log de un mismo webhook (firma inválida, excepción al
+  // procesar) quedan correlacionadas entre sí sin tener que adivinar por
+  // timestamp cuáles son del mismo request.
+  const requestId = crypto.randomUUID();
+
   const config = resolveConfigOrRespond();
   if (config instanceof Response) return config;
 
   const rawBody = await request.text();
   const signature = request.headers.get("x-hub-signature-256");
   if (!isValidMetaSignature(rawBody, signature, config.appSecret)) {
-    logger.warn("Webhook de WhatsApp: firma inválida, evento descartado.");
-    return new Response("Firma inválida.", { status: 401 });
+    logger.warn({ requestId }, "Webhook de WhatsApp: firma inválida, evento descartado.");
+    return new Response("Firma inválida.", { status: 401, headers: { "x-request-id": requestId } });
   }
 
   let payload: unknown;
@@ -93,8 +99,11 @@ export async function POST(request: Request): Promise<Response> {
     // se registra y se responde 200 igual (devolver 500 haría que Meta
     // reintente el mismo evento, arriesgando mensajes duplicados en vez de
     // solucionar el problema).
-    logger.error({ error }, "Webhook de WhatsApp: error inesperado procesando el evento.");
+    logger.error(
+      { error, requestId },
+      "Webhook de WhatsApp: error inesperado procesando el evento.",
+    );
   }
 
-  return new Response("EVENT_RECEIVED", { status: 200 });
+  return new Response("EVENT_RECEIVED", { status: 200, headers: { "x-request-id": requestId } });
 }

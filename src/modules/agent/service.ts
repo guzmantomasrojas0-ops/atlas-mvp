@@ -1,4 +1,5 @@
 import { aiService as defaultAIService, type AIService, type ChatMessage } from "@/modules/ai";
+import { logger } from "@/lib/logger";
 import { sendMessage } from "@/modules/conversation";
 import {
   buildAgentContext as buildContextFromRaw,
@@ -101,12 +102,32 @@ export async function converseWithAgent(
     { role: "user", content: message },
   ];
 
+  const startedAt = Date.now();
   const result = await runConversationLoop(history, {
     aiService,
     toolRegistry: agentToolRegistry,
     toolDefinitions,
     context,
   });
+
+  // Una línea estructurada por turno: duración total, tokens consumidos, y
+  // cuánto tardó cada tool — la única forma de responder "¿por qué esta
+  // conversación tardó/costó tanto?" sin tener que reproducirla.
+  logger.info(
+    {
+      businessId: business.id,
+      conversationId,
+      durationMs: Date.now() - startedAt,
+      stopReason: result.stopReason,
+      usage: result.usage,
+      steps: result.steps.map((step) => ({
+        toolName: step.toolName,
+        success: step.result.success,
+        durationMs: step.result.executionTimeMs,
+      })),
+    },
+    "converseWithAgent: turno completado.",
+  );
 
   if (result.response) {
     await sendMessage(business.id, conversationId, result.response, "AGENT");

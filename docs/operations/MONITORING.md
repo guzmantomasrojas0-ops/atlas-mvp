@@ -69,6 +69,59 @@ llegando al dashboard. Verificarlo end-to-end (generar un error a propósito
 y confirmar que aparece en Sentry) es un paso pendiente antes del primer
 cliente real, ver el Production Readiness Report.
 
+## Observabilidad: logs estructurados, request id, métricas de IA
+
+Todo lo de arriba es "algo falló". Esto es "qué pasó, cuánto tardó, cuánto
+costó" — para responder eso sin tener que reproducir la conversación.
+
+- **Logs estructurados**: ya existían (pino, `src/lib/logger.ts`) — cada
+  línea es JSON, no texto libre, así que son filtrables/agregables por
+  cualquier plataforma de logs (la del proveedor de hosting, o Sentry
+  mismo).
+- **Request id / correlation id**: `api/webhooks/whatsapp/route.ts` y
+  `api/cron/notifications/route.ts` generan un `requestId`
+  (`crypto.randomUUID()`) al entrar, lo incluyen en cada línea de log de
+  ese request, y lo devuelven en el header `x-request-id` de la respuesta —
+  así una línea de log puntual se puede correlacionar con el request que la
+  generó sin adivinar por timestamp. Alcance real: estos dos Route Handlers
+  (los únicos con lógica multi-paso que ya logueaba errores). No se extendió
+  a todo `/dashboard/*` vía middleware — el matcher de `src/middleware.ts`
+  hoy solo gatea autenticación, y mezclar ahí un request id de proceso
+  ampliaría su alcance sin necesidad real: en Vercel, cada invocación ya
+  tiene su propio id de request en los logs de la plataforma.
+- **Duración de herramientas del Agente**: ya se medía (`executeTool` en
+  `modules/agent/domain/execution.ts` calcula `executionTimeMs` desde el
+  Sprint 9) pero nunca se registraba en ningún lado. Ahora
+  `converseWithAgent` (`modules/agent/service.ts`) loguea, al final de cada
+  turno, un resumen estructurado con la duración de cada tool llamada:
+  ```json
+  { "toolName": "SEARCH_AVAILABILITY", "success": true, "durationMs": 12 }
+  ```
+- **Consumo de tokens por turno de conversación**: `CompletionResponse.usage`
+  (tokens de prompt/completion/total, ya lo devolvía cada `LanguageModel`)
+  se descartaba en `runConversationLoop` — nunca se acumulaba ni se
+  registraba. Ahora se suma en cada iteración del loop y se loguea junto con
+  la duración total del turno:
+  ```json
+  {"businessId":"...","conversationId":"...","durationMs":13,"stopReason":"final_response","usage":{"promptTokens":842,"completionTokens":37,"totalTokens":879},"steps":[...],"msg":"converseWithAgent: turno completado."}
+  ```
+  Con `AI_PROVIDER=anthropic` esto ya son tokens reales de la API — sumando
+  estas líneas por `conversationId` (vía cualquier agregador de logs) se
+  obtiene el costo real de esa conversación, no una estimación.
+- **Tiempos de respuesta HTTP** (todas las rutas, no solo el Agente): no se
+  construyó un sistema de métricas propio para esto — decisión deliberada,
+  no un vacío. `tracesSampleRate` de Sentry (ver arriba) ya instrumenta
+  automáticamente duración de Route Handlers y Server Components una vez que
+  hay DSN configurado; sumarle un sistema de métricas paralelo sería
+  duplicar lo que Sentry Performance ya cubre. Si además se quiere,
+  Vercel Analytics/Speed Insights (activables desde el panel de Vercel, sin
+  código) cubren Web Vitals del lado del cliente.
+
+Verificado en este Sprint corriendo la suite completa de tests: se puede ver
+la duración real de cada tool (`FIND_SERVICE`, `SEARCH_AVAILABILITY`,
+`CREATE_APPOINTMENT`, etc.) y el `requestId` del webhook/cron apareciendo en
+los logs de una corrida real, no solo revisando el código.
+
 ## Qué NO cubre esto todavía
 
 - **Alertas** (Slack/email cuando algo falla) — se configuran en el panel de
