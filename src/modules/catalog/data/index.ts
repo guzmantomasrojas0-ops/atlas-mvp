@@ -1,3 +1,2 @@
-// Módulo catalog — capa de datos (repositorio Prisma).
-// Fase 0: sin implementación todavía.
-export {};
+export * from "./service-repository";
+export * from "./staff-repository";
