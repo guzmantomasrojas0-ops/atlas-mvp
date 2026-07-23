@@ -39,7 +39,10 @@ export async function markConversationReadAction(conversationId: string): Promis
   try {
     await markAsRead(business.id, conversationId);
   } catch (error) {
-    logger.error({ error, conversationId }, "markConversationReadAction: no se pudo marcar como leída.");
+    logger.error(
+      { error, conversationId },
+      "markConversationReadAction: no se pudo marcar como leída.",
+    );
     return;
   }
 

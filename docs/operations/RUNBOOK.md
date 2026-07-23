@@ -39,7 +39,7 @@ gh api repos/guzmantomasrojas0-ops/atlas-mvp/branches/master/protection \
 ```
 
 Hasta que se active esto, el pipeline corre y reporta el resultado en cada
-push/PR (ver la pestaña *Actions* del repo), pero un merge con CI en rojo
+push/PR (ver la pestaña _Actions_ del repo), pero un merge con CI en rojo
 todavía es posible manualmente — el gate es informativo, no obligatorio,
 hasta este paso.
 

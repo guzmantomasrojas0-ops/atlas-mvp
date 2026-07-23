@@ -26,7 +26,10 @@ export async function createStaffMemberAction(
     if (error instanceof ZodError) {
       return { success: false, error: "Revisá los datos ingresados." };
     }
-    logger.error({ error }, "createStaffMemberAction: error inesperado guardando el miembro del equipo.");
+    logger.error(
+      { error },
+      "createStaffMemberAction: error inesperado guardando el miembro del equipo.",
+    );
     return { success: false, error: "No se pudo guardar el miembro del equipo. Intentá de nuevo." };
   }
 

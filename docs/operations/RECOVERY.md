@@ -7,12 +7,12 @@ incidente mientras se resuelve).
 
 ## Antes que nada: ¿cuál es el escenario?
 
-| Síntoma | Escenario | Ir a |
-|---|---|---|
-| Una migración rompió datos o falló a mitad de camino | Corrupción/error de datos, la base sigue viva | [Escenario A](#escenario-a-corrupción-o-error-de-datos-la-base-sigue-viva) |
-| La base no responde, el proveedor reporta una caída | Base inaccesible | [Escenario B](#escenario-b-base-inaccesible) |
-| El proyecto en Vercel (o el host elegido) no bootea / build roto en prod | Deploy roto | [Escenario C](#escenario-c-deploy-roto-en-producción) |
-| Se perdió o corrompió el repositorio de código | Pérdida de código | [Escenario D](#escenario-d-pérdida-de-código) |
+| Síntoma                                                                  | Escenario                                     | Ir a                                                                       |
+| ------------------------------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------- |
+| Una migración rompió datos o falló a mitad de camino                     | Corrupción/error de datos, la base sigue viva | [Escenario A](#escenario-a-corrupción-o-error-de-datos-la-base-sigue-viva) |
+| La base no responde, el proveedor reporta una caída                      | Base inaccesible                              | [Escenario B](#escenario-b-base-inaccesible)                               |
+| El proyecto en Vercel (o el host elegido) no bootea / build roto en prod | Deploy roto                                   | [Escenario C](#escenario-c-deploy-roto-en-producción)                      |
+| Se perdió o corrompió el repositorio de código                           | Pérdida de código                             | [Escenario D](#escenario-d-pérdida-de-código)                              |
 
 ## Escenario A: corrupción o error de datos, la base sigue viva
 
