@@ -1,9 +1,10 @@
-// Prisma schema — Fase 0 (fundaciones).
+// Prisma schema.
 //
-// Estos modelos son deliberadamente mínimos: solo el esqueleto de relaciones
-// necesario para que la arquitectura multi-tenant descrita en PLAN.md sea
-// válida desde el día uno. Los campos de negocio (precios, horarios, estados,
-// contenido de mensajes, etc.) se agregan fase a fase, no acá.
+// La mayoría de estos modelos son deliberadamente mínimos: solo el esqueleto
+// de relaciones necesario para que la arquitectura multi-tenant descrita en
+// PLAN.md sea válida desde el día uno. Los campos de negocio se agregan
+// módulo a módulo. `Business` es la excepción — Sprint 1 (Business Setup) lo
+// completa primero porque todo el resto del sistema cuelga de `businessId`.
 
 generator client {
   provider = "prisma-client"
@@ -14,20 +15,87 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Tipo de negocio soportado por ATLAS.
+enum BusinessType {
+  BARBERSHOP
+  SALON
+  CLINIC
+  OTHER
+}
+
 /// El tenant: un negocio (barbería, salón, clínica) que usa ATLAS.
 model Business {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String       @id @default(cuid())
+  name         String
+  phone        String
+  address      String
+  /// Nombre de zona horaria IANA (ej. "America/Bogota").
+  timezone     String
+  businessType BusinessType
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  staffMembers  StaffMember[]
-  services      Service[]
-  clients       Client[]
-  appointments  Appointment[]
-  conversations Conversation[]
+  staffMembers    StaffMember[]
+  services        Service[]
+  clients         Client[]
+  appointments    Appointment[]
+  conversations   Conversation[]
+  channelMappings ChannelMapping[]
+  payments        Payment[]
+  notifications   AppointmentNotification[]
+  users           User[]
 
   @@map("businesses")
+}
+
+/// Nivel de acceso de un User dentro de su negocio. OWNER: todo, incluida la
+/// gestión de cuentas. MANAGER: operación completa (reservas, pagos,
+/// catálogo) pero no gestión de usuarios. STAFF: operación del día a día
+/// (reservas, conversaciones) sin acceso a pagos ni catálogo.
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+/// Una cuenta con la que se inicia sesión. Pertenece a exactamente un
+/// negocio — ATLAS todavía no soporta que la misma persona trabaje en más de
+/// un negocio (fuera del alcance funcional de esta fase).
+model User {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions Session[]
+
+  @@index([businessId])
+  @@map("users")
+}
+
+/// Una sesión activa. El valor real de la cookie nunca se guarda tal cual —
+/// solo su hash (`tokenHash`) — así una fuga de la base (backup, injection)
+/// no alcanza para hacerse pasar por un usuario logueado; hace falta el
+/// token original, que solo existe en la cookie del navegador.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  /// A diferencia del resto de las relaciones de este schema (RESTRICT por
+  /// defecto, para nunca borrar datos de negocio por accidente), una sesión
+  /// no tiene ningún valor propio una vez que su User deja de existir — CASCADE
+  /// acá es lo correcto, no un atajo.
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 /// Un miembro del equipo del negocio.
@@ -36,6 +104,9 @@ model StaffMember {
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
   name       String
+  /// Rol dentro del negocio, texto libre (ej. "Barbero", "Estilista",
+  /// "Recepcionista") — no es un enum porque varía demasiado entre verticales.
+  role       String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -47,12 +118,15 @@ model StaffMember {
 
 /// Un servicio que el negocio ofrece (ej. "Corte de pelo").
 model Service {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id])
-  name       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String   @id @default(cuid())
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id])
+  name            String
+  /// Precio en la unidad principal de la moneda local (ej. 25000.00).
+  price           Decimal  @db.Decimal(10, 2)
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   appointments Appointment[]
 
@@ -60,74 +134,235 @@ model Service {
   @@map("services")
 }
 
-/// Un cliente final del negocio.
+/// Un cliente final del negocio. Se crea automáticamente al agendar una
+/// reserva a su nombre — todavía no hay un módulo de gestión de clientes.
 model Client {
   id         String   @id @default(cuid())
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
   name       String
+  phone      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  appointments Appointment[]
+  appointments  Appointment[]
+  conversations Conversation[]
 
   @@index([businessId])
   @@map("clients")
 }
 
+/// Estado de una reserva. Solo `CONFIRMED` participa en la validación
+/// anti-doble-reserva (ver constraint EXCLUDE en la migración) — una reserva
+/// cancelada libera el horario.
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+/// Estado de pago de una cita. Vive acá porque Appointment sigue siendo el
+/// dueño de la cita — es solo la bandera rápida/derivada; el detalle de cada
+/// cobro (monto, método, quién lo confirmó) vive en `Payment`, en el módulo
+/// `payments/`. Ningún campo de `Payment` se duplica acá.
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
 /// Una cita agendada. El núcleo transaccional del dominio de scheduling.
 model Appointment {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id])
-  staffId    String
-  staff      StaffMember @relation(fields: [staffId], references: [id])
-  serviceId  String
-  service    Service @relation(fields: [serviceId], references: [id])
-  clientId   String
-  client     Client @relation(fields: [clientId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String            @id @default(cuid())
+  businessId    String
+  business      Business          @relation(fields: [businessId], references: [id])
+  staffId       String
+  staff         StaffMember       @relation(fields: [staffId], references: [id])
+  serviceId     String
+  service       Service           @relation(fields: [serviceId], references: [id])
+  clientId      String
+  client        Client            @relation(fields: [clientId], references: [id])
+  /// Instantes UTC absolutos (timestamptz) — nunca "hora local naive". La
+  /// conversión a/desde la hora local del negocio vive en la capa de dominio.
+  startsAt      DateTime          @db.Timestamptz(3)
+  endsAt        DateTime          @db.Timestamptz(3)
+  status        AppointmentStatus @default(CONFIRMED)
+  paymentStatus PaymentStatus     @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  @@index([businessId])
-  @@index([staffId])
+  payments      Payment[]
+  notifications AppointmentNotification[]
+
+  /// Reemplaza al índice plano `businessId` que tenía esta tabla — todo query
+  /// de calendario (dashboard, analytics) filtra por negocio Y rango de
+  /// `startsAt`; este compuesto sirve ambos casos ("solo businessId" incluido,
+  /// como prefijo) sin mantener dos índices redundantes.
+  @@index([businessId, startsAt])
+  @@index([staffId, startsAt])
   @@map("appointments")
 }
 
-/// Una conversación entre un cliente final y ATLAS, en algún canal.
-model Conversation {
-  id         String   @id @default(cuid())
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+/// Método con el que se registró un pago. Solo ZELLE por ahora — el enum ya
+/// queda listo para sumar otros métodos manuales o pasarelas más adelante
+/// sin romper nada existente.
+enum PaymentMethod {
+  ZELLE
+}
 
-  messages     Message[]
-  agentActions AgentAction[]
+/// Estado del registro de pago en sí (no confundir con `Appointment.paymentStatus`):
+/// CONFIRMED es el pago activo/vigente; REVERTED es historial — revertir un
+/// pago nunca borra la fila, para no perder el rastro de auditoría.
+enum PaymentRecordStatus {
+  CONFIRMED
+  REVERTED
+}
 
+/// Registro manual de que el negocio confirmó haber recibido un pago (hoy
+/// solo por Zelle). ATLAS nunca procesa dinero — esto es puramente un
+/// registro. Vive en el módulo `payments/`; ningún otro módulo debe escribir
+/// acá ni conocer sus reglas.
+model Payment {
+  id            String              @id @default(cuid())
+  businessId    String
+  business      Business            @relation(fields: [businessId], references: [id])
+  appointmentId String
+  appointment   Appointment         @relation(fields: [appointmentId], references: [id])
+  amount        Decimal             @db.Decimal(10, 2)
+  currency      String
+  method        PaymentMethod
+  status        PaymentRecordStatus @default(CONFIRMED)
+  notes         String?
+  /// Texto libre — todavía no hay usuarios/autenticación en el sistema, así
+  /// que quien confirma el pago se identifica escribiendo su nombre.
+  confirmedBy   String
+  createdAt     DateTime            @default(now())
+  confirmedAt   DateTime
+
+  /// Compuesto en vez de un índice plano de `businessId` — las agregaciones de
+  /// analytics (ingresos, ingresos por día) siempre filtran por negocio Y un
+  /// rango de `confirmedAt`; el prefijo `businessId` sigue sirviendo los demás
+  /// queries (ej. listPaymentsByBusiness) sin duplicar índice.
+  @@index([businessId, confirmedAt])
+  @@index([appointmentId])
+  @@map("payments")
+}
+
+/// Los tres momentos que el módulo `notifications/` sabe reconocer. Nuevos
+/// tipos se agregan acá, no como strings sueltos en otro lado.
+enum NotificationType {
+  REMINDER_24H
+  REMINDER_2H
+  THANK_YOU
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  /// El cliente no tiene teléfono registrado — no hay a dónde enviarle nada.
+  /// No es un error transitorio: no se reintenta.
+  SKIPPED
+}
+
+/// Rastrea qué recordatorios/agradecimientos ya se dispararon (o se
+/// intentaron) para una cita. `targetAt` se recalcula en cada corrida desde
+/// el horario ACTUAL de la cita (ej. `startsAt - 24h`) — si la cita se
+/// reprograma, `targetAt` cambia y esta fila deja de matchear al nuevo
+/// horario, así que el scheduler la trata como pendiente de nuevo sin que
+/// `scheduling/` necesite saber que este módulo existe.
+model AppointmentNotification {
+  id            String             @id @default(cuid())
+  businessId    String
+  business      Business           @relation(fields: [businessId], references: [id])
+  appointmentId String
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id])
+  type          NotificationType
+  targetAt      DateTime           @db.Timestamptz(3)
+  status        NotificationStatus @default(PENDING)
+  attemptCount  Int                @default(0)
+  lastAttemptAt DateTime?          @db.Timestamptz(3)
+  lastError     String?
+  sentAt        DateTime?          @db.Timestamptz(3)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([appointmentId, type, targetAt])
   @@index([businessId])
+  @@map("appointment_notifications")
+}
+
+/// Canal por el que llega/sale una conversación. Todavía no hay ningún
+/// proveedor conectado — esto solo modela el dato para cuando lo esté.
+enum ConversationChannel {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK_MESSENGER
+  SMS
+  WEB_CHAT
+}
+
+/// Quién escribió un mensaje. CLIENT es siempre entrante; STAFF y AGENT son
+/// salientes — AGENT queda listo para cuando exista el agente de IA, sin
+/// necesitar otra migración.
+enum MessageSender {
+  CLIENT
+  STAFF
+  AGENT
+}
+
+/// Una conversación entre un cliente final y el negocio, en algún canal.
+model Conversation {
+  id         String              @id @default(cuid())
+  businessId String
+  business   Business            @relation(fields: [businessId], references: [id])
+  clientId   String
+  client     Client              @relation(fields: [clientId], references: [id])
+  channel    ConversationChannel
+  /// Último momento en que alguien del negocio vio esta conversación. Sin
+  /// autenticación todavía no hay "por usuario" — es un solo valor por
+  /// conversación. Se compara contra el último mensaje CLIENT para decidir
+  /// si se muestra como no leída.
+  lastReadAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  messages       Message[]
+  channelMapping ChannelMapping?
+
+  @@index([businessId, updatedAt])
+  @@index([clientId])
   @@map("conversations")
 }
 
 /// Un mensaje individual dentro de una conversación.
 model Message {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  createdAt      DateTime     @default(now())
+  conversation   Conversation  @relation(fields: [conversationId], references: [id])
+  sender         MessageSender
+  content        String
+  createdAt      DateTime      @default(now())
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
   @@map("messages")
 }
 
-/// Registro de auditoría de una acción ejecutada por el agente
-/// (qué se pidió, qué se ejecutó) dentro de una conversación.
-model AgentAction {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  createdAt      DateTime     @default(now())
+/// Vincula la identidad de una conversación en un canal externo (el
+/// `externalConversationId` que manda WhatsApp/Instagram/etc.) con una
+/// Conversation interna. Ningún otro módulo conoce este modelo — toda la
+/// lógica de mapeo canal-externo → Conversation vive en `messaging/`.
+model ChannelMapping {
+  id                     String              @id @default(cuid())
+  businessId             String
+  business               Business            @relation(fields: [businessId], references: [id])
+  channel                ConversationChannel
+  externalConversationId String
+  externalUserId         String
+  conversationId         String              @unique
+  conversation           Conversation        @relation(fields: [conversationId], references: [id])
+  createdAt              DateTime            @default(now())
 
-  @@index([conversationId])
-  @@map("agent_actions")
+  @@unique([businessId, channel, externalConversationId])
+  @@map("channel_mappings")
 }
