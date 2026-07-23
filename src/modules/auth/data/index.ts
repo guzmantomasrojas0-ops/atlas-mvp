@@ -1,3 +1,2 @@
-// Módulo auth — capa de datos (repositorio Prisma).
-// Fase 0: sin implementación todavía.
-export {};
+export * from "./session-repository";
+export * from "./user-repository";
