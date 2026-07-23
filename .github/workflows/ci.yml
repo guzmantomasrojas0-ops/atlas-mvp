@@ -1,0 +1,111 @@
+name: CI
+
+# Corre en cada push y en cada PR contra master. Los checks de este workflow
+# son el gate real de calidad — ver docs/operations/RUNBOOK.md para cómo
+# activar "Require status checks to pass" en la protección de la rama
+# (una config de GitHub, no de este archivo: no se puede activar desde acá).
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Si se empuja un nuevo commit mientras un run anterior del mismo PR/branch
+# sigue corriendo, cancela el viejo — evita gastar minutos de CI en un
+# resultado que ya quedó obsoleto.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Base de una sola instancia para todo el job — no es la de desarrollo ni
+  # la de producción, vive y muere con el runner.
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/atlas_mvp_ci?schema=public&options=-c%20TimeZone%3DUTC"
+  SHADOW_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/atlas_mvp_ci_shadow?schema=public&options=-c%20TimeZone%3DUTC"
+  # "openai" simulado — ninguna llamada real, sin costo ni flakiness de red.
+  # El único test que golpea la API real de Anthropic (tests/integration/ai-anthropic-real.test.ts)
+  # se salta solo si no hay ANTHROPIC_API_KEY (por diseño, ver ese archivo).
+  AI_PROVIDER: "openai"
+  CRON_SECRET: "ci-placeholder-secret"
+
+jobs:
+  verify:
+    name: Typecheck, lint, tests, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create databases (app + shadow)
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE atlas_mvp_ci;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE atlas_mvp_ci_shadow;"
+
+      - name: Prisma generate
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      # Falla si schema.prisma quedó desincronizado del historial de
+      # migraciones — el caso típico es alguien editando el modelo a mano sin
+      # correr `prisma migrate dev`. Exit code 2 = hay diferencia -> falla el
+      # step.
+      - name: Prisma schema drift check
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
+
+      # Aplica el historial completo de migraciones contra una base limpia,
+      # igual que pasaría en un deploy real — si una migración depende de
+      # estado manual no versionado, esto lo revienta acá y no en producción.
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Unit + integration tests (Vitest)
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests (Playwright)
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

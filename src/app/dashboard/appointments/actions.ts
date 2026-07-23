@@ -28,14 +28,11 @@ import {
 export type CreateAppointmentActionResult = { success: true } | { success: false; error: string };
 export type CancelAppointmentActionResult = { success: true } | { success: false; error: string };
 export type ConfirmPaymentActionResult =
-  | { success: true; paymentStatus: "PENDING" | "PAID" }
-  | { success: false; error: string };
+  { success: true; paymentStatus: "PENDING" | "PAID" } | { success: false; error: string };
 export type RevertPaymentActionResult =
-  | { success: true; paymentStatus: "PENDING" | "PAID" }
-  | { success: false; error: string };
+  { success: true; paymentStatus: "PENDING" | "PAID" } | { success: false; error: string };
 export type RescheduleAppointmentActionResult =
-  | { success: true; appointment: AppointmentListItem }
-  | { success: false; error: string };
+  { success: true; appointment: AppointmentListItem } | { success: false; error: string };
 
 export async function createAppointmentAction(
   input: AppointmentInput,

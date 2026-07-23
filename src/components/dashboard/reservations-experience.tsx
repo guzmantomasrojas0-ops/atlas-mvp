@@ -107,7 +107,9 @@ export function ReservationsExperience({
     setSelectedAppointment((current) => (current ? { ...current, paymentStatus } : current));
     setAppointments((current) =>
       current.map((appointment) =>
-        appointment.id === selectedAppointment?.id ? { ...appointment, paymentStatus } : appointment,
+        appointment.id === selectedAppointment?.id
+          ? { ...appointment, paymentStatus }
+          : appointment,
       ),
     );
   }

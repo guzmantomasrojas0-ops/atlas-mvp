@@ -98,7 +98,7 @@ export function Sidebar({ user }: SidebarProps) {
               onClick={() => startLogout(() => logoutAction())}
               disabled={isLoggingOut}
               aria-label="Cerrar sesión"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground ring-offset-background focus-visible:ring-brand-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground ring-offset-background focus-visible:ring-brand-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -118,7 +118,7 @@ function NavRow({ item, active }: { item: NavItem; active: boolean }) {
       <Link
         href={item.href}
         className={cn(
-          "ring-offset-background focus-visible:ring-brand-600 relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-offset-2",
+          "ring-offset-background focus-visible:ring-brand-600 relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
           active
             ? "bg-brand-500/10 text-brand-300"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
