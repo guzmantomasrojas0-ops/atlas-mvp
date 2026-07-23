@@ -56,3 +56,7 @@ next-env.d.ts
 prisma/dev.db*
 
 /src/generated/prisma
+
+# backups locales de scripts/backup-db.sh — contienen datos reales de
+# clientes (nombres, teléfonos, mensajes). Nunca deben subirse al repo.
+/backups/
