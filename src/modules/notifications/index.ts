@@ -1,3 +1,14 @@
-// Punto de entrada público del módulo notifications.
-// Fase 0: sin implementación todavía. Se implementa en la Fase 5 (ver PLAN.md).
-export {};
+export type {
+  DueNotification,
+  ExistingNotificationRecord,
+  NotifiableAppointment,
+  NotificationStatus,
+  NotificationType,
+} from "./domain";
+export {
+  composeNotificationMessage,
+  computeDueNotifications,
+  MAX_NOTIFICATION_ATTEMPTS,
+} from "./domain";
+export type { NotificationRunSummary } from "./service";
+export { runDueNotifications } from "./service";
