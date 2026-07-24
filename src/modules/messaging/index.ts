@@ -1,4 +1,4 @@
-export { defaultClientName } from "./domain";
+export { defaultClientName, isPhoneBasedChannel } from "./domain";
 export type {
   IncomingMessage,
   MessageReceiver,

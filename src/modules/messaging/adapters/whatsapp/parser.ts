@@ -4,6 +4,7 @@ import type { IncomingMessage } from "../../domain";
 const whatsAppMessageSchema = z
   .object({
     from: z.string(),
+    id: z.string().optional(),
     timestamp: z.string(),
     type: z.string(),
     text: z.object({ body: z.string() }).optional(),
@@ -54,6 +55,7 @@ export function parseWhatsAppWebhookPayload(payload: unknown): IncomingMessage[]
           externalUserId: message.from,
           text: message.text.body,
           timestamp: new Date(Number(message.timestamp) * 1000),
+          externalMessageId: message.id,
         });
       }
     }

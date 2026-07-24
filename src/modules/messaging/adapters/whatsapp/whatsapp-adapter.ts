@@ -44,7 +44,7 @@ export class WhatsAppAdapter implements MessageReceiver, MessageSender {
   async handleWebhookPayload(payload: unknown): Promise<void> {
     if (!this.handler) {
       throw new Error(
-        "WhatsAppAdapter no tiene ningún handler registrado — llamá a attachChannel() primero.",
+        "WhatsAppAdapter no tiene ningún handler registrado — llama a attachChannel() primero.",
       );
     }
     for (const message of parseWhatsAppWebhookPayload(payload)) {

@@ -22,6 +22,7 @@ async function deleteBusinessCompletely(id: string): Promise<void> {
   await db.channelMapping.deleteMany({ where: { businessId: id } });
   await db.message.deleteMany({ where: { conversation: { businessId: id } } });
   await db.conversation.deleteMany({ where: { businessId: id } });
+  await db.payment.deleteMany({ where: { businessId: id } });
   await db.appointment.deleteMany({ where: { businessId: id } });
   await db.client.deleteMany({ where: { businessId: id } });
   await db.service.deleteMany({ where: { businessId: id } });
@@ -211,6 +212,13 @@ describe("POST /api/webhooks/whatsapp — Meta → WhatsAppAdapter → Messaging
     expect(await db.client.count({ where: { businessId } })).toBe(1);
     expect(await db.conversation.count({ where: { businessId } })).toBe(1);
 
+    // El teléfono real del cliente (el mismo número que Meta mandó en
+    // `from`) queda guardado en Client.phone, no solo incrustado en su
+    // nombre provisional — sin esto, sus recordatorios automáticos (que
+    // exigen `client.phone`) nunca se enviarían.
+    const client = await db.client.findFirst({ where: { businessId } });
+    expect(client?.phone).toBe("573001234567");
+
     // La respuesta del Agent se entregó de vuelta al cliente por WhatsApp Cloud API (mockeada).
     expect(fetchMock).toHaveBeenCalledWith(
       "https://graph.facebook.com/v20.0/test-phone-id/messages",
@@ -243,5 +251,24 @@ describe("POST /api/webhooks/whatsapp — Meta → WhatsAppAdapter → Messaging
     expect(response.status).toBe(200);
     expect(await db.conversation.count({ where: { businessId } })).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("una reentrega del mismo webhook (mismo wamid) se ignora — Meta puede reintentar la misma entrega", async () => {
+    const payload = webhookPayload("573005555555", "Hola, quiero un corte");
+
+    const first = await POST(postRequest(payload));
+    const second = await POST(postRequest(payload)); // Meta reintenta el mismo evento.
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await db.conversation.count({ where: { businessId } })).toBe(1);
+    expect(await db.client.count({ where: { businessId } })).toBe(1);
+
+    const conversation = await db.conversation.findFirst({ where: { businessId } });
+    const messages = await listMessages(conversation!.id);
+    expect(messages).toHaveLength(2); // CLIENT + AGENT, no duplicados.
+
+    // La respuesta del Agent se entregó una sola vez, no dos.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

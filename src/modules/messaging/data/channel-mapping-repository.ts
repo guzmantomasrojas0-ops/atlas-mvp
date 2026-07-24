@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import type { ConversationChannelValue } from "@/modules/conversation";
-import { defaultClientName } from "../domain";
+import { defaultClientName, isPhoneBasedChannel } from "../domain";
 
 /**
  * Resuelve cómo un `externalConversationId` de un canal externo se
@@ -26,7 +26,11 @@ export async function findOrCreateMappedConversation(
 
   return db.$transaction(async (tx) => {
     const client = await tx.client.create({
-      data: { businessId, name: defaultClientName(channel, externalUserId) },
+      data: {
+        businessId,
+        name: defaultClientName(channel, externalUserId),
+        phone: isPhoneBasedChannel(channel) ? externalUserId : null,
+      },
     });
     const conversation = await tx.conversation.create({
       data: { businessId, clientId: client.id, channel },

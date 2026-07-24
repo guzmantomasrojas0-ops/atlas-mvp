@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { defaultClientName } from "@/modules/messaging";
+import { defaultClientName, isPhoneBasedChannel } from "@/modules/messaging";
+
+describe("isPhoneBasedChannel", () => {
+  it("es cierto para WhatsApp y SMS — su externalUserId es un número de teléfono real", () => {
+    expect(isPhoneBasedChannel("WHATSAPP")).toBe(true);
+    expect(isPhoneBasedChannel("SMS")).toBe(true);
+  });
+
+  it("es falso para Instagram, Messenger y Chat web — su externalUserId es un id opaco de esa plataforma", () => {
+    expect(isPhoneBasedChannel("INSTAGRAM")).toBe(false);
+    expect(isPhoneBasedChannel("FACEBOOK_MESSENGER")).toBe(false);
+    expect(isPhoneBasedChannel("WEB_CHAT")).toBe(false);
+  });
+});
 
 describe("defaultClientName", () => {
   it("incluye la etiqueta humana del canal y el id externo", () => {

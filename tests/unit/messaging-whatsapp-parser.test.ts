@@ -44,8 +44,17 @@ describe("parseWhatsAppWebhookPayload", () => {
         externalUserId: "573001234567",
         text: "Hola, quiero un corte",
         timestamp: new Date(1700000000 * 1000),
+        externalMessageId: "wamid.TEXT1",
       },
     ]);
+  });
+
+  it("un mensaje sin id (formato inesperado) deja externalMessageId sin definir, en vez de fallar", () => {
+    const messages = parseWhatsAppWebhookPayload(
+      payloadWithMessages([textMessage({ id: undefined })]),
+    );
+
+    expect(messages[0].externalMessageId).toBeUndefined();
   });
 
   it("procesa varios mensajes de texto en la misma entrada", () => {

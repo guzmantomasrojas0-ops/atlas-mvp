@@ -13,10 +13,15 @@ export function listMessagesByConversation(conversationId: string) {
  * transacción — así la lista lateral puede ordenar por actividad reciente
  * con un simple `orderBy: updatedAt`, sin tener que hacer join con mensajes.
  */
-export function createMessage(conversationId: string, sender: MessageSenderValue, content: string) {
+export function createMessage(
+  conversationId: string,
+  sender: MessageSenderValue,
+  content: string,
+  externalMessageId?: string,
+) {
   return db.$transaction(async (tx) => {
     const message = await tx.message.create({
-      data: { conversationId, sender, content },
+      data: { conversationId, sender, content, externalMessageId },
     });
     await tx.conversation.update({
       where: { id: conversationId },
@@ -24,4 +29,9 @@ export function createMessage(conversationId: string, sender: MessageSenderValue
     });
     return message;
   });
+}
+
+/** ¿Ya existe un mensaje con este id de canal externo? La clave de idempotencia real ante reentregas duplicadas de un webhook (ver comentario en el schema). */
+export function findMessageByExternalId(externalMessageId: string) {
+  return db.message.findUnique({ where: { externalMessageId } });
 }

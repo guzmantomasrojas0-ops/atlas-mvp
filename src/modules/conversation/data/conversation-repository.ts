@@ -13,6 +13,18 @@ export function listConversationsByBusiness(businessId: string) {
   });
 }
 
+/** Conversaciones de un cliente puntual, con su último mensaje — para su historial en la ficha de Cliente. */
+export function listConversationsByClient(businessId: string, clientId: string) {
+  return db.conversation.findMany({
+    where: { businessId, clientId },
+    include: {
+      client: true,
+      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 export function findConversationById(businessId: string, id: string) {
   return db.conversation.findFirst({
     where: { id, businessId },

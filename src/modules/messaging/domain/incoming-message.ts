@@ -13,4 +13,12 @@ export interface IncomingMessage {
   externalUserId: string;
   text: string;
   timestamp: Date;
+  /**
+   * El id que el canal externo le puso a este mensaje puntual (ej. el
+   * `wamid.` de WhatsApp). Opcional porque no todos los canales lo
+   * proveen — cuando existe, el Gateway lo usa para detectar reentregas
+   * duplicadas del mismo evento (Meta puede reintentar la entrega de un
+   * webhook más de una vez).
+   */
+  externalMessageId?: string;
 }

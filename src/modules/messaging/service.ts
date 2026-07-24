@@ -1,6 +1,7 @@
+import { logger } from "@/lib/logger";
 import type { AIService } from "@/modules/ai";
 import { converseWithAgent, type BusinessRef } from "@/modules/agent";
-import { sendMessage } from "@/modules/conversation";
+import { messageExistsForExternalId, sendMessage } from "@/modules/conversation";
 import { findOrCreateMappedConversation } from "./data";
 import type { IncomingMessage, MessageReceiver, MessageSender, OutgoingMessage } from "./domain";
 
@@ -15,6 +16,23 @@ export async function receiveMessage(
   incoming: IncomingMessage,
   aiService?: AIService,
 ): Promise<OutgoingMessage | null> {
+  // Meta (y en general cualquier proveedor de webhooks) garantiza entrega
+  // "al menos una vez", no "exactamente una vez" — puede reintentar el mismo
+  // evento si nuestra respuesta se demoró o se perdió en tránsito. Sin este
+  // chequeo, una reentrega duplicada crearía un segundo mensaje CLIENT y
+  // volvería a correr el Agent sobre el mismo texto (doble respuesta, o peor,
+  // una reserva duplicada si el texto era una confirmación).
+  if (incoming.externalMessageId) {
+    const alreadyProcessed = await messageExistsForExternalId(incoming.externalMessageId);
+    if (alreadyProcessed) {
+      logger.info(
+        { businessId: business.id, externalMessageId: incoming.externalMessageId },
+        "Mensaje entrante duplicado (reentrega del mismo evento) — ignorado.",
+      );
+      return null;
+    }
+  }
+
   const conversationId = await findOrCreateMappedConversation(
     business.id,
     incoming.channel,
@@ -22,7 +40,13 @@ export async function receiveMessage(
     incoming.externalUserId,
   );
 
-  await sendMessage(business.id, conversationId, incoming.text, "CLIENT");
+  await sendMessage(
+    business.id,
+    conversationId,
+    incoming.text,
+    "CLIENT",
+    incoming.externalMessageId,
+  );
   const result = await converseWithAgent(business, conversationId, incoming.text, aiService);
 
   if (!result.response) return null;

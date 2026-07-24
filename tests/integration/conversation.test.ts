@@ -8,6 +8,7 @@ import {
   listConversations,
   listMessages,
   markAsRead,
+  messageExistsForExternalId,
   sendMessage,
 } from "@/modules/conversation";
 
@@ -114,5 +115,25 @@ describe("conversation module — integración con Postgres real", () => {
 
     const after = await db.message.count({ where: { conversationId: conversation.id } });
     expect(after).toBe(before);
+  });
+
+  it("sendMessage persiste el externalMessageId cuando se lo pasa, y messageExistsForExternalId lo detecta después", async () => {
+    const conversation = await findOrCreateConversation(businessId, clientId, "WHATSAPP");
+
+    expect(await messageExistsForExternalId("wamid.123")).toBe(false);
+
+    await sendMessage(businessId, conversation.id, "Hola", "CLIENT", "wamid.123");
+
+    expect(await messageExistsForExternalId("wamid.123")).toBe(true);
+  });
+
+  it("mensajes sin externalMessageId (STAFF/AGENT normales) no colisionan entre sí", async () => {
+    const conversation = await findOrCreateConversation(businessId, clientId, "WHATSAPP");
+
+    await sendMessage(businessId, conversation.id, "primero");
+    await sendMessage(businessId, conversation.id, "segundo");
+
+    const messages = await listMessages(conversation.id);
+    expect(messages).toHaveLength(2);
   });
 });

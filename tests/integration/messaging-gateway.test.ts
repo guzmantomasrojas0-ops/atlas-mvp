@@ -109,6 +109,11 @@ describe("Messaging Gateway — ConsoleAdapter -> Conversation -> Agent -> Outgo
 
     expect(await db.client.count({ where: { businessId } })).toBe(1);
     expect(await db.conversation.count({ where: { businessId } })).toBe(1);
+
+    // WEB_CHAT no es un canal telefónico — su externalUserId es un id de
+    // sesión, no un teléfono real, así que Client.phone debe quedar sin usar.
+    const client = await db.client.findFirst({ where: { businessId } });
+    expect(client?.phone).toBeNull();
   });
 
   it("un segundo mensaje con el mismo externalConversationId reutiliza la misma Conversation, sin duplicar Client/Conversation/mapping", async () => {
@@ -213,5 +218,39 @@ describe("Messaging Gateway — ConsoleAdapter -> Conversation -> Agent -> Outgo
         `AGENT: recibido: Hola soy ${user}`,
       ]);
     }
+  });
+
+  it("una reentrega duplicada del mismo externalMessageId se ignora — sin mensaje duplicado, sin volver a correr el Agent", async () => {
+    let completions = 0;
+    const adapter = new ConsoleAdapter();
+    attachChannel(
+      business,
+      adapter,
+      adapter,
+      new AIService({
+        name: "anthropic",
+        async complete() {
+          completions++;
+          return textResponse("respuesta");
+        },
+      }),
+    );
+
+    const duplicated = incoming({
+      text: "Hola, quiero un corte",
+      externalMessageId: "wamid.DUPLICADO",
+    });
+    await adapter.simulateIncoming(duplicated);
+    await adapter.simulateIncoming(duplicated); // Meta reintenta el mismo evento.
+
+    expect(completions).toBe(1);
+    expect(adapter.sent).toHaveLength(1);
+
+    const conversation = await db.conversation.findFirst({ where: { businessId } });
+    const messages = await listMessages(conversation!.id);
+    expect(messages.map((m) => `${m.sender}: ${m.content}`)).toEqual([
+      "CLIENT: Hola, quiero un corte",
+      "AGENT: respuesta",
+    ]);
   });
 });

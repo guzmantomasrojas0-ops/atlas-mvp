@@ -11,8 +11,10 @@ export {
   findOrCreateConversation,
   getConversation,
   listConversations,
+  listConversationsForClient,
   listMessages,
   markAsRead,
+  messageExistsForExternalId,
   sendMessage,
 } from "./service";
 export type { ConversationDetail, ConversationListItem, MessageItem } from "./service";
