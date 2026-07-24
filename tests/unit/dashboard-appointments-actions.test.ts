@@ -94,7 +94,7 @@ describe("cancelAppointmentAction", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "No se pudo cancelar la reserva. Intentá de nuevo.",
+      error: "No se pudo cancelar la reserva. Intenta de nuevo.",
     });
   });
 });
@@ -170,7 +170,7 @@ describe("rescheduleAppointmentAction", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "No se pudo reprogramar la reserva. Intentá de nuevo.",
+      error: "No se pudo reprogramar la reserva. Intenta de nuevo.",
     });
   });
 });

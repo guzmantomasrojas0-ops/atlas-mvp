@@ -69,7 +69,7 @@ describe("buildSystemPrompt", () => {
   it("instruye a usar las herramientas en vez de inventar datos, y a no cancelar/modificar reservas todavía", () => {
     const prompt = buildSystemPrompt(context());
     expect(prompt.toLowerCase()).toContain("nunca inventes");
-    expect(prompt.toLowerCase()).toContain("todavía no podés cancelar ni modificar reservas");
+    expect(prompt.toLowerCase()).toContain("todavía no puedes cancelar ni modificar reservas");
   });
 
   it("instruye a pedir confirmación explícita antes de llamar a CREATE_APPOINTMENT, nunca en la misma respuesta que el resumen", () => {

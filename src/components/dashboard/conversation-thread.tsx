@@ -153,7 +153,7 @@ export function ConversationThread({ conversationId, initialMessages }: Conversa
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
-            placeholder="Escribí un mensaje…"
+            placeholder="Escribe un mensaje…"
             aria-label="Escribir un mensaje"
             className="focus:border-brand-500 focus:ring-brand-500/20 border-border bg-card text-foreground placeholder:text-muted-foreground max-h-32 flex-1 resize-none rounded-lg border px-3 py-2.5 text-sm transition-colors duration-150 outline-none focus:ring-2"
           />

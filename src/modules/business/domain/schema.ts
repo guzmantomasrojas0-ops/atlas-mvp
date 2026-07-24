@@ -18,10 +18,10 @@ export const businessInputSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^[0-9+()\-\s]{6,20}$/, "Ingresá un teléfono válido"),
+    .regex(/^[0-9+()\-\s]{6,20}$/, "Ingresa un teléfono válido"),
   address: z.string().trim().min(4, "La dirección es muy corta").max(200),
   timezone: z.string().refine((tz) => supportedTimezones.has(tz), "Zona horaria inválida"),
-  businessType: z.enum(BUSINESS_TYPES, { message: "Seleccioná un tipo de negocio" }),
+  businessType: z.enum(BUSINESS_TYPES, { message: "Selecciona un tipo de negocio" }),
 });
 
 export type BusinessInput = z.infer<typeof businessInputSchema>;

@@ -126,13 +126,13 @@ export function CreateAppointmentPanel({
       <Card className="p-6">
         <h2 className="text-foreground text-base font-semibold">Nueva reserva</h2>
         <p className="text-muted-foreground mt-1 text-xs">
-          Elegí el servicio, quién la atiende, y cuándo — la duración se calcula sola.
+          Elige el servicio, quién la atiende, y cuándo — la duración se calcula sola.
         </p>
 
         {noServices || noStaff ? (
           <p className="border-border bg-muted/60 text-muted-foreground mt-4 rounded-lg border border-dashed px-3 py-3 text-xs">
-            Necesitás al menos un {noServices ? "servicio" : "miembro del equipo"} para poder
-            agendar. Sumalo desde {noServices ? "Servicios" : "Equipo"} primero.
+            Necesitas al menos un {noServices ? "servicio" : "miembro del equipo"} para poder
+            agendar. Súmalo desde {noServices ? "Servicios" : "Equipo"} primero.
           </p>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 flex flex-col gap-4">
@@ -146,7 +146,7 @@ export function CreateAppointmentPanel({
                     value={field.value}
                     onValueChange={field.onChange}
                     options={serviceOptions}
-                    placeholder="Seleccioná un servicio"
+                    placeholder="Selecciona un servicio"
                     invalid={!!errors.serviceId}
                   />
                 )}
@@ -167,7 +167,7 @@ export function CreateAppointmentPanel({
                     value={field.value}
                     onValueChange={field.onChange}
                     options={staffOptions}
-                    placeholder="Seleccioná un miembro"
+                    placeholder="Selecciona un miembro"
                     invalid={!!errors.staffId}
                   />
                 )}

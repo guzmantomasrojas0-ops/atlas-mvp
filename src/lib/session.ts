@@ -20,7 +20,7 @@ export interface CurrentSession {
 
 export class ForbiddenError extends Error {
   constructor() {
-    super("No tenés permiso para hacer esto.");
+    super("No tienes permiso para hacer esto.");
     this.name = "ForbiddenError";
   }
 }

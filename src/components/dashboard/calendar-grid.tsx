@@ -104,8 +104,8 @@ export function CalendarGrid({
     return (
       <EmptyState
         icon={<Users className="h-5 w-5" />}
-        title="Agregá tu equipo primero"
-        description="La vista por día organiza las reservas por miembro del equipo — sumá al menos uno desde Equipo."
+        title="Agrega tu equipo primero"
+        description="La vista por día organiza las reservas por miembro del equipo — suma al menos uno desde Equipo."
       />
     );
   }

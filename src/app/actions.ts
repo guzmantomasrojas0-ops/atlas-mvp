@@ -41,10 +41,10 @@ export async function createBusinessAction(input: SetupInput): Promise<CreateBus
       return { success: false, error: error.message };
     }
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá los datos ingresados." };
+      return { success: false, error: "Revisa los datos ingresados." };
     }
     logger.error({ error }, "createBusinessAction: error inesperado creando el negocio.");
-    return { success: false, error: "No se pudo guardar el negocio. Intentá de nuevo." };
+    return { success: false, error: "No se pudo guardar el negocio. Intenta de nuevo." };
   }
 
   await setSessionCookie(token);

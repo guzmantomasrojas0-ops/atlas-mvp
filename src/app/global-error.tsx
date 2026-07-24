@@ -35,7 +35,7 @@ export default function GlobalError({
         <div style={{ textAlign: "center", maxWidth: 420, padding: 24 }}>
           <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Algo salió mal</h1>
           <p style={{ fontSize: 14, color: "#a1a1aa", marginBottom: 20 }}>
-            El equipo ya fue notificado. Probá recargar la página en unos segundos.
+            El equipo ya fue notificado. Prueba recargar la página en unos segundos.
           </p>
           <button
             onClick={() => window.location.reload()}

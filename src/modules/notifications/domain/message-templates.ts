@@ -24,7 +24,7 @@ export function composeNotificationMessage(
       return (
         `Hola ${appointment.clientName}! Te recordamos tu cita de ${appointment.serviceName} ` +
         `el ${dateLabel} a las ${time} con ${appointment.staffName} en ${businessName}. ` +
-        `Si necesitás reprogramar o cancelar, avisanos.`
+        `Si necesitas reprogramar o cancelar, avísanos.`
       );
     case "REMINDER_2H":
       return (

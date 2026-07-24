@@ -59,7 +59,7 @@ const TOOL_CONTEXT_DEFAULTS: Partial<
  * system prompt de nuevo.
  */
 const CONFIRMATION_REMINDER =
-  ' Esta acción modifica datos reales. Llamala únicamente después de que el cliente haya confirmado explícitamente (por ejemplo: "sí", "confirmar", "perfecto", "dale", "hacé la reserva") — nunca antes, y nunca asumas una confirmación implícita.';
+  ' Esta acción modifica datos reales. Llámala únicamente después de que el cliente haya confirmado explícitamente (por ejemplo: "sí", "confirmar", "perfecto", "dale", "hacé la reserva") — nunca antes, y nunca asumas una confirmación implícita.';
 
 function omitProperties(
   schema: Record<string, unknown>,

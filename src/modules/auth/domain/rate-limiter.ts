@@ -23,7 +23,7 @@ const attemptsByEmail = new Map<string, AttemptWindow>();
 
 export class TooManyLoginAttemptsError extends Error {
   constructor() {
-    super("Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.");
+    super("Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.");
     this.name = "TooManyLoginAttemptsError";
   }
 }

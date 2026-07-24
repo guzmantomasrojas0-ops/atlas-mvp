@@ -142,13 +142,13 @@ test.describe.serial("Appointments", () => {
     await page.getByRole("button", { name: "Crear reserva" }).click();
 
     // El placeholder del Select coincide textualmente con su propio mensaje
-    // de error ("Seleccioná un servicio") — se busca el mensaje puntualmente
+    // de error ("Selecciona un servicio") — se busca el mensaje puntualmente
     // por su rol de alerta, no por texto, para no matchear ambos.
     await expect(
-      page.getByRole("alert").filter({ hasText: "Seleccioná un servicio" }),
+      page.getByRole("alert").filter({ hasText: "Selecciona un servicio" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("alert").filter({ hasText: "Seleccioná un miembro del equipo" }),
+      page.getByRole("alert").filter({ hasText: "Selecciona un miembro del equipo" }),
     ).toBeVisible();
   });
 
@@ -166,7 +166,7 @@ test.describe.serial("Appointments", () => {
     await withDb((client) => client.query("DELETE FROM staff_members"));
     await loginAsUser(context, baseURL!, "res-e2e-business");
     await page.goto("/dashboard/appointments?view=day");
-    await expect(page.getByText("Agregá tu equipo primero")).toBeVisible();
+    await expect(page.getByText("Agrega tu equipo primero")).toBeVisible();
   });
 
   test("reprograma una reserva desde el detalle y el nuevo horario persiste tras refrescar", async ({

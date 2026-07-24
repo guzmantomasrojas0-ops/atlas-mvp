@@ -5,11 +5,11 @@ import { z } from "zod";
 // contra el string tal como llega, así que un `z.email().trim()` recibiría
 // espacios en blanco (ej. de un autocompletado del navegador) y rechazaría
 // un correo válido antes de llegar a limpiarlo.
-const emailField = z.string().trim().toLowerCase().pipe(z.email("Ingresá un correo válido"));
+const emailField = z.string().trim().toLowerCase().pipe(z.email("Ingresa un correo válido"));
 
 export const loginInputSchema = z.object({
   email: emailField,
-  password: z.string().min(1, "Ingresá tu contraseña"),
+  password: z.string().min(1, "Ingresa tu contraseña"),
 });
 
 export type LoginInput = z.infer<typeof loginInputSchema>;
@@ -27,6 +27,6 @@ export type CreateOwnerAccountInput = z.infer<typeof createOwnerAccountInputSche
 /** Para altas futuras de usuarios con un rol elegido explícitamente (no usado todavía en Sprint 21 — sin UI propia). */
 export const createUserInputSchema = z.object({
   ...credentialsShape,
-  role: z.enum(["OWNER", "MANAGER", "STAFF"], { message: "Seleccioná un rol" }),
+  role: z.enum(["OWNER", "MANAGER", "STAFF"], { message: "Selecciona un rol" }),
 });
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;

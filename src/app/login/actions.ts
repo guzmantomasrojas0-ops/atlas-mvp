@@ -22,10 +22,10 @@ export async function loginAction(input: LoginInput): Promise<LoginActionResult>
       return { success: false, error: error.message };
     }
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá los datos ingresados." };
+      return { success: false, error: "Revisa los datos ingresados." };
     }
     logger.error({ error }, "loginAction: error inesperado iniciando sesión.");
-    return { success: false, error: "No se pudo iniciar sesión. Intentá de nuevo." };
+    return { success: false, error: "No se pudo iniciar sesión. Intenta de nuevo." };
   }
 
   redirect("/dashboard");

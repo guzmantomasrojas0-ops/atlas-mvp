@@ -27,7 +27,7 @@ export type MessageSenderValue = "CLIENT" | "STAFF" | "AGENT";
 
 export const sendMessageInputSchema = z.object({
   conversationId: z.string().min(1),
-  content: z.string().trim().min(1, "Escribí un mensaje").max(4000, "El mensaje es muy largo"),
+  content: z.string().trim().min(1, "Escribe un mensaje").max(4000, "El mensaje es muy largo"),
 });
 
 export type SendMessageInput = z.infer<typeof sendMessageInputSchema>;

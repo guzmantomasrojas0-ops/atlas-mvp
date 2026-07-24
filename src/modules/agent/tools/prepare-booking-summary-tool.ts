@@ -99,7 +99,7 @@ export const prepareBookingSummaryTool: Tool<
         isAvailable: Boolean(matchingSlot),
         note: matchingSlot
           ? "Todavía no se guardó — falta que el negocio la confirme."
-          : "Ese horario ya no está disponible; pedile al cliente que elija otro.",
+          : "Ese horario ya no está disponible; pídele al cliente que elija otro.",
       },
     };
   },

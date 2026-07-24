@@ -112,7 +112,7 @@ test.describe.serial("Conversations", () => {
   }) => {
     await loginAsUser(context, baseURL!, "conv-e2e-business");
     await page.goto("/dashboard/conversations");
-    await expect(page.getByText("Seleccioná una conversación")).toBeVisible();
+    await expect(page.getByText("Selecciona una conversación")).toBeVisible();
   });
 
   test("estado vacío cuando el negocio no tiene conversaciones todavía", async ({
@@ -124,7 +124,7 @@ test.describe.serial("Conversations", () => {
     await withDb((client) => client.query("DELETE FROM conversations"));
     await loginAsUser(context, baseURL!, "conv-e2e-business");
     await page.goto("/dashboard/conversations");
-    await expect(page.getByText("Todavía no tenés conversaciones")).toBeVisible();
+    await expect(page.getByText("Todavía no tienes conversaciones")).toBeVisible();
   });
 
   test("redirige a /login si no hay una sesión válida", async ({ page }) => {

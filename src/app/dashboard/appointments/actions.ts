@@ -47,10 +47,10 @@ export async function createAppointmentAction(
       return { success: false, error: error.message };
     }
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá los datos ingresados." };
+      return { success: false, error: "Revisa los datos ingresados." };
     }
     logger.error({ error }, "createAppointmentAction: error inesperado guardando la reserva.");
-    return { success: false, error: "No se pudo guardar la reserva. Intentá de nuevo." };
+    return { success: false, error: "No se pudo guardar la reserva. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/appointments");
@@ -73,7 +73,7 @@ export async function cancelAppointmentAction(
       { error, appointmentId },
       "cancelAppointmentAction: error inesperado cancelando la reserva.",
     );
-    return { success: false, error: "No se pudo cancelar la reserva. Intentá de nuevo." };
+    return { success: false, error: "No se pudo cancelar la reserva. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/appointments");
@@ -110,13 +110,13 @@ export async function confirmPaymentAction(
       return { success: false, error: error.message };
     }
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá los datos del pago." };
+      return { success: false, error: "Revisa los datos del pago." };
     }
     logger.error(
       { error, appointmentId },
       "confirmPaymentAction: error inesperado confirmando el pago.",
     );
-    return { success: false, error: "No se pudo confirmar el pago. Intentá de nuevo." };
+    return { success: false, error: "No se pudo confirmar el pago. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/appointments");
@@ -146,7 +146,7 @@ export async function revertPaymentAction(
       { error, appointmentId },
       "revertPaymentAction: error inesperado revirtiendo el pago.",
     );
-    return { success: false, error: "No se pudo revertir el pago. Intentá de nuevo." };
+    return { success: false, error: "No se pudo revertir el pago. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/appointments");
@@ -179,13 +179,13 @@ export async function rescheduleAppointmentAction(
       return { success: false, error: error.message };
     }
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá la fecha y el horario." };
+      return { success: false, error: "Revisa la fecha y el horario." };
     }
     logger.error(
       { error, appointmentId },
       "rescheduleAppointmentAction: error inesperado reprogramando la reserva.",
     );
-    return { success: false, error: "No se pudo reprogramar la reserva. Intentá de nuevo." };
+    return { success: false, error: "No se pudo reprogramar la reserva. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/appointments");

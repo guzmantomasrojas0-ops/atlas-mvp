@@ -162,7 +162,7 @@ export function BusinessSetupExperience() {
                         value={field.value}
                         onValueChange={field.onChange}
                         options={timezoneOptions}
-                        placeholder="Seleccioná una zona horaria"
+                        placeholder="Selecciona una zona horaria"
                         searchable
                         searchPlaceholder="Buscar zona horaria…"
                         invalid={!!errors.business?.timezone}
@@ -185,7 +185,7 @@ export function BusinessSetupExperience() {
                         value={field.value}
                         onValueChange={field.onChange}
                         options={businessTypeOptions}
-                        placeholder="Seleccioná un tipo"
+                        placeholder="Selecciona un tipo"
                         invalid={!!errors.business?.businessType}
                       />
                     )}
@@ -196,7 +196,7 @@ export function BusinessSetupExperience() {
               <div className="border-border border-t pt-6">
                 <p className="text-foreground mb-1 text-sm font-semibold">Tu cuenta</p>
                 <p className="text-muted-foreground mb-4 text-xs">
-                  Vas a usar este correo y contraseña para iniciar sesión — sos el dueño (Owner) de
+                  Vas a usar este correo y contraseña para iniciar sesión — eres el dueño (Owner) de
                   este negocio.
                 </p>
 
@@ -226,7 +226,7 @@ export function BusinessSetupExperience() {
                         id="owner.email"
                         type="email"
                         autoComplete="email"
-                        placeholder="vos@tunegocio.com"
+                        placeholder="tu@tunegocio.com"
                         invalid={!!errors.owner?.email}
                         className="h-11"
                         {...register("owner.email")}

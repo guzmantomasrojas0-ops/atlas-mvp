@@ -22,10 +22,10 @@ export async function createServiceAction(input: ServiceInput): Promise<CreateSe
     await createService(business.id, input);
   } catch (error) {
     if (error instanceof ZodError) {
-      return { success: false, error: "Revisá los datos ingresados." };
+      return { success: false, error: "Revisa los datos ingresados." };
     }
     logger.error({ error }, "createServiceAction: error inesperado guardando el servicio.");
-    return { success: false, error: "No se pudo guardar el servicio. Intentá de nuevo." };
+    return { success: false, error: "No se pudo guardar el servicio. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/services");

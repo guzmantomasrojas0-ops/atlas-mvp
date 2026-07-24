@@ -16,7 +16,7 @@ export class EmailAlreadyInUseError extends Error {
 
 export class SessionExpiredError extends Error {
   constructor() {
-    super("La sesión expiró. Iniciá sesión de nuevo.");
+    super("La sesión expiró. Inicia sesión de nuevo.");
     this.name = "SessionExpiredError";
   }
 }

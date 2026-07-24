@@ -10,7 +10,7 @@ export const paymentMethodLabels: Record<PaymentMethodValue, string> = {
 
 export const confirmPaymentInputSchema = z.object({
   amount: z
-    .number({ message: "Ingresá un monto válido" })
+    .number({ message: "Ingresa un monto válido" })
     .positive("El monto debe ser mayor a 0")
     .max(99999999.99, "El monto es demasiado alto"),
   currency: z.string().trim().min(1).max(10).default("USD"),
@@ -19,7 +19,7 @@ export const confirmPaymentInputSchema = z.object({
   confirmedBy: z
     .string()
     .trim()
-    .min(2, "Ingresá quién confirmó el pago")
+    .min(2, "Ingresa quién confirmó el pago")
     .max(120, "El nombre es demasiado largo"),
 });
 

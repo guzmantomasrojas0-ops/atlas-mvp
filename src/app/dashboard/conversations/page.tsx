@@ -6,8 +6,8 @@ export default function ConversationsPage() {
     <div className="flex h-full items-center justify-center p-8">
       <EmptyState
         icon={<MessagesSquare className="h-5 w-5" />}
-        title="Seleccioná una conversación"
-        description="Elegí una conversación de la lista para ver los mensajes."
+        title="Selecciona una conversación"
+        description="Elige una conversación de la lista para ver los mensajes."
       />
     </div>
   );

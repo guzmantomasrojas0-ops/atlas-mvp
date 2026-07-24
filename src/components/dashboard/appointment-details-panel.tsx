@@ -276,7 +276,7 @@ export function AppointmentDetailsPanel({
           ) : mode === "confirmCancel" ? (
             <div className="flex flex-col gap-2.5">
               <p className="text-muted-foreground text-sm">
-                ¿Confirmás que querés cancelar esta reserva?
+                ¿Confirmas que quieres cancelar esta reserva?
               </p>
               {cancelError && <p className="text-sm text-red-400">{cancelError}</p>}
               <div className="flex gap-2">

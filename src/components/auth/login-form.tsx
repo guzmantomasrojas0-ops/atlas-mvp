@@ -52,7 +52,7 @@ export function LoginForm() {
             </div>
             <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
             <CardDescription className="text-[15px]">
-              Entrá con tu correo y contraseña para acceder a tu Dashboard.
+              Ingresa con tu correo y contraseña para acceder a tu Dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -62,7 +62,7 @@ export function LoginForm() {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  placeholder="vos@tunegocio.com"
+                  placeholder="tu@tunegocio.com"
                   invalid={!!errors.email}
                   className="h-11"
                   {...register("email")}

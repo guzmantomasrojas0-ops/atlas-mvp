@@ -87,6 +87,6 @@ test.describe.serial("Business Setup", () => {
     await expect(
       page.getByText("El nombre debe tener al menos 2 caracteres").first(),
     ).toBeVisible();
-    await expect(page.getByText("Ingresá un teléfono válido")).toBeVisible();
+    await expect(page.getByText("Ingresa un teléfono válido")).toBeVisible();
   });
 });

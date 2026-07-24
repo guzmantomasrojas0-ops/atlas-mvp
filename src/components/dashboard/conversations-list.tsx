@@ -87,7 +87,7 @@ export function ConversationsList({ conversations }: ConversationsListProps) {
           <EmptyState
             className="m-4 border-0"
             icon={<MessagesSquare className="h-5 w-5" />}
-            title="Todavía no tenés conversaciones"
+            title="Todavía no tienes conversaciones"
             description="Cuando conectes un canal, van a aparecer acá."
           />
         ) : filtered.length === 0 ? (
@@ -95,7 +95,7 @@ export function ConversationsList({ conversations }: ConversationsListProps) {
             className="m-4 border-0"
             icon={<Search className="h-5 w-5" />}
             title="Sin resultados"
-            description="Probá con otra búsqueda o filtro."
+            description="Prueba con otra búsqueda o filtro."
           />
         ) : (
           filtered.map((conversation) => {

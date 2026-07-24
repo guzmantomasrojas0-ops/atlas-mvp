@@ -52,7 +52,7 @@ export function AddServiceForm() {
       <Card className="p-6">
         <h2 className="text-foreground text-base font-semibold">Agregar servicio</h2>
         <p className="text-muted-foreground mt-1 text-xs">
-          Sumá los servicios que ofrece tu negocio, con su precio y duración.
+          Suma los servicios que ofrece tu negocio, con su precio y duración.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 flex flex-col gap-4">

@@ -28,7 +28,7 @@ export class ConsoleAdapter implements MessageReceiver, MessageSender {
   async simulateIncoming(message: IncomingMessage): Promise<void> {
     if (!this.handler) {
       throw new Error(
-        "ConsoleAdapter no tiene ningún handler registrado — llamá a attachChannel() primero.",
+        "ConsoleAdapter no tiene ningún handler registrado — llama a attachChannel() primero.",
       );
     }
     await this.handler(message);

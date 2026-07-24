@@ -18,10 +18,10 @@ export async function sendMessageAction(
     await sendMessage(business.id, conversationId, content);
   } catch (error) {
     if (error instanceof ZodError) {
-      return { success: false, error: "Escribí un mensaje válido." };
+      return { success: false, error: "Escribe un mensaje válido." };
     }
     logger.error({ error }, "sendMessageAction: error inesperado enviando el mensaje.");
-    return { success: false, error: "No se pudo enviar el mensaje. Intentá de nuevo." };
+    return { success: false, error: "No se pudo enviar el mensaje. Intenta de nuevo." };
   }
 
   revalidatePath("/dashboard/conversations");

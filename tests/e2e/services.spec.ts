@@ -59,7 +59,7 @@ test.describe.serial("Services", () => {
     await loginAsUser(context, baseURL!, businessId);
     await page.goto("/dashboard/services");
 
-    await expect(page.getByText("Todavía no tenés servicios")).toBeVisible();
+    await expect(page.getByText("Todavía no tienes servicios")).toBeVisible();
 
     await page.getByLabel("Nombre del servicio").fill("Corte de pelo");
     await page.getByLabel("Precio").fill("25000");

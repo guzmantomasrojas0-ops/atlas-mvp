@@ -10,8 +10,8 @@ export function ServiceList({ services }: { services: ServiceListItem[] }) {
     return (
       <EmptyState
         icon={<Package className="h-5 w-5" />}
-        title="Todavía no tenés servicios"
-        description="Agregá el primero desde el formulario para que ATLAS pueda ofrecerlo a tus clientes."
+        title="Todavía no tienes servicios"
+        description="Agrega el primero desde el formulario para que ATLAS pueda ofrecerlo a tus clientes."
       />
     );
   }
