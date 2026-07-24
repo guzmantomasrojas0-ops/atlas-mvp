@@ -136,6 +136,13 @@ export function ReservationsExperience({
 
   const rangeLabel = useMemo(() => formatCalendarRangeLabel(view, date), [view, date]);
 
+  // Un miembro inactivo sigue viéndose en el calendario (conserva su
+  // historial de citas), pero ya no se ofrece para reservas nuevas.
+  const bookableStaffMembers = useMemo(
+    () => staffMembers.filter((staffMember) => staffMember.active),
+    [staffMembers],
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <CalendarToolbar
@@ -174,7 +181,7 @@ export function ReservationsExperience({
           <CreateAppointmentPanel
             key={JSON.stringify(prefill)}
             services={services}
-            staffMembers={staffMembers}
+            staffMembers={bookableStaffMembers}
             prefill={prefill}
             todayDate={todayDate}
             conflict={conflict}

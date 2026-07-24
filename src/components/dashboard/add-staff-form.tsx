@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { createStaffMemberAction } from "@/app/dashboard/staff/actions";
@@ -11,9 +10,13 @@ import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { staffMemberInputSchema, type StaffMemberInput } from "@/modules/catalog/domain";
+import type { StaffMemberListItem } from "@/modules/catalog";
 
-export function AddStaffForm() {
-  const router = useRouter();
+interface AddStaffFormProps {
+  onCreated: (staffMember: StaffMemberListItem) => void;
+}
+
+export function AddStaffForm({ onCreated }: AddStaffFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -33,7 +36,7 @@ export function AddStaffForm() {
       return;
     }
     reset();
-    router.refresh();
+    onCreated(result.staffMember);
   }
 
   return (
@@ -46,7 +49,7 @@ export function AddStaffForm() {
       <Card className="p-6">
         <h2 className="text-foreground text-base font-semibold">Agregar miembro del equipo</h2>
         <p className="text-muted-foreground mt-1 text-xs">
-          Sumá a las personas que atienden a tus clientes, con su rol.
+          Suma a las personas que atienden a tus clientes, con su rol.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 flex flex-col gap-4">

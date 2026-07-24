@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { createBusiness } from "@/modules/business";
-import { createService, createStaffMember } from "@/modules/catalog";
+import { createService, createStaffMember, setStaffMemberActive } from "@/modules/catalog";
 import {
   AppointmentNotFoundError,
   cancelAppointment,
@@ -113,6 +113,49 @@ describe("scheduling module — integración con Postgres real", () => {
         time: "10:15",
       }),
     ).rejects.toThrow(SchedulingConflictError);
+  });
+
+  it("rechaza una reserva NUEVA para un miembro del equipo desactivado", async () => {
+    await setStaffMemberActive(businessId, staffId, false);
+
+    await expect(
+      createAppointment(businessId, TIMEZONE, {
+        staffId,
+        serviceId,
+        clientName: "Cliente 1",
+        clientPhone: "",
+        date: "2026-07-20",
+        time: "10:00",
+      }),
+    ).rejects.toThrow(InvalidReferenceError);
+  });
+
+  it("SEARCH_AVAILABILITY excluye a un miembro del equipo desactivado cuando se pide disponibilidad de todo el equipo", async () => {
+    await setStaffMemberActive(businessId, staffId, false);
+
+    const availability = await searchAvailability(businessId, TIMEZONE, "2026-07-20", 30);
+
+    expect(availability.find((entry) => entry.staffId === staffId)).toBeUndefined();
+  });
+
+  it("reprogramar una cita YA existente con un staff luego desactivado sigue funcionando", async () => {
+    const created = await createAppointment(businessId, TIMEZONE, {
+      staffId,
+      serviceId,
+      clientName: "Cliente 1",
+      clientPhone: "",
+      date: "2026-07-20",
+      time: "10:00",
+    });
+
+    await setStaffMemberActive(businessId, staffId, false);
+
+    const rescheduled = await rescheduleAppointment(businessId, TIMEZONE, created.id, {
+      date: "2026-07-20",
+      time: "14:00",
+    });
+
+    expect(rescheduled.startsAt.getTime()).not.toBe(created.startsAt.getTime());
   });
 
   it("permite reservas superpuestas si son de miembros del equipo distintos", async () => {

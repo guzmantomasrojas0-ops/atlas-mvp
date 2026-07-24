@@ -63,7 +63,7 @@ test.describe.serial("Staff", () => {
     await loginAsUser(context, baseURL!, businessId);
     await page.goto("/dashboard/staff");
 
-    await expect(page.getByText("Todavía no tenés equipo")).toBeVisible();
+    await expect(page.getByText("Todavía no tienes equipo")).toBeVisible();
 
     await page.getByLabel("Nombre").fill("Juan Pérez");
     await page.getByLabel("Rol").fill("Barbero");
@@ -72,6 +72,42 @@ test.describe.serial("Staff", () => {
     await expect(page.getByText("1 persona")).toBeVisible();
     await expect(page.getByText("Juan Pérez")).toBeVisible();
     await expect(page.getByText("Barbero")).toBeVisible();
+  });
+
+  test("edita, desactiva, reactiva y elimina un miembro del equipo", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await loginAsUser(context, baseURL!, businessId);
+    await page.goto("/dashboard/staff");
+
+    await page.getByLabel("Nombre").fill("Juan Pérez");
+    await page.getByLabel("Rol").fill("Barbero");
+    await page.getByRole("button", { name: "Agregar al equipo" }).click();
+    await expect(page.getByText("1 persona")).toBeVisible();
+
+    // Seleccionar el miembro abre el panel de edición.
+    await page.getByRole("button", { name: /Juan Pérez/ }).click();
+    await expect(page.getByRole("heading", { name: "Editar miembro" })).toBeVisible();
+
+    // Editar nombre y rol.
+    await page.getByLabel("Nombre").fill("Juan Pérez Editado");
+    await page.getByLabel("Rol").fill("Barbero senior");
+    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await expect(page.getByText("Juan Pérez Editado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Barbero senior", { exact: true })).toBeVisible();
+
+    // Desactivar — se muestra como inactivo (badge en la lista y en el panel), y reactivar lo revierte.
+    await page.getByRole("button", { name: "Desactivar" }).click();
+    await expect(page.getByText("Inactivo").first()).toBeVisible();
+    await page.getByRole("button", { name: "Reactivar" }).click();
+    await expect(page.getByText("Inactivo")).toHaveCount(0);
+
+    // Eliminar (con confirmación) — no tiene citas, así que se borra de verdad.
+    await page.getByRole("button", { name: "Eliminar miembro" }).click();
+    await page.getByRole("button", { name: "Eliminar" }).click();
+    await expect(page.getByText("Todavía no tienes equipo")).toBeVisible();
   });
 
   test("muestra errores de validación con campos vacíos", async ({ page, context, baseURL }) => {

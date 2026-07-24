@@ -119,6 +119,17 @@ async function resolveAndValidateAppointment(
   if (!staffMember) {
     throw new InvalidReferenceError("El miembro del equipo seleccionado no existe.");
   }
+  // Un miembro inactivo no puede recibir reservas NUEVAS (Dashboard y agente
+  // de IA ya lo excluyen de sus propias listas, pero esta es la validación
+  // final y compartida). Reprogramar una cita YA existente con ese mismo
+  // miembro sí se permite — `excludeAppointmentId` solo está presente ahí —
+  // para no dejar atrapada una cita real solo porque el staff se desactivó
+  // después de crearla.
+  if (!staffMember.active && !excludeAppointmentId) {
+    throw new InvalidReferenceError(
+      "Ese miembro del equipo ya no está activo — elige otro para la reserva nueva.",
+    );
+  }
 
   const startsAt = toUtcInstant(input.date, input.time, businessTimezone);
   const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
@@ -340,8 +351,10 @@ export interface StaffAvailability {
 
 /**
  * Horarios libres de un día para un servicio de cierta duración, por cada
- * miembro del equipo (o uno puntual, si se pasa `staffId`). Una sola
- * consulta de reservas para todo el día — no una por miembro del equipo.
+ * miembro del equipo activo (o uno puntual, si se pasa `staffId` — y solo si
+ * ese miembro sigue activo). Un miembro inactivo nunca debe ofrecerse para
+ * una reserva nueva, sea desde el agente de IA o cualquier otro caller. Una
+ * sola consulta de reservas para todo el día — no una por miembro del equipo.
  */
 export async function searchAvailability(
   businessId: string,
@@ -351,8 +364,10 @@ export async function searchAvailability(
   staffId?: string,
 ): Promise<StaffAvailability[]> {
   const staffMembers = staffId
-    ? await getStaffMemberById(businessId, staffId).then((member) => (member ? [member] : []))
-    : await listStaffMembers(businessId);
+    ? await getStaffMemberById(businessId, staffId).then((member) =>
+        member?.active ? [member] : [],
+      )
+    : (await listStaffMembers(businessId)).filter((member) => member.active);
 
   const rangeStart = toUtcInstant(date, "00:00", businessTimezone);
   const rangeEnd = toUtcInstant(date, "23:59", businessTimezone);

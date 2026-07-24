@@ -27,15 +27,18 @@ export function filterStaffByQuery(staff: StaffMatch[], query?: string): StaffMa
 }
 
 /**
- * Busca miembros del equipo por nombre. Todo el equipo cargado se devuelve
- * como activo — el esquema todavía no distingue staff activo/inactivo.
+ * Busca miembros del equipo por nombre. Excluye a los inactivos — el agente
+ * nunca debe ofrecerle al cliente un profesional que el negocio dio de baja
+ * para reservas nuevas (mismo criterio que el dropdown del Dashboard, ver
+ * `reservations-experience.tsx`).
  */
 export const findStaffTool: Tool<FindStaffInput, FindStaffOutput> = {
   name: "FIND_STAFF",
-  description: "Busca miembros del equipo por nombre (búsqueda parcial).",
+  description: "Busca miembros del equipo activos por nombre (búsqueda parcial).",
   inputSchema: findStaffInputSchema,
   async execute(input) {
     const allStaff = await listStaffMembers(input.businessId);
-    return { staff: filterStaffByQuery(allStaff, input.query) };
+    const activeStaff = allStaff.filter((member) => member.active);
+    return { staff: filterStaffByQuery(activeStaff, input.query) };
   },
 };
