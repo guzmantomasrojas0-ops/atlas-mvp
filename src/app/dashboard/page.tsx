@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { DashboardOverviewSkeleton } from "@/components/dashboard/dashboard-overview-skeleton";
+import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -64,8 +65,13 @@ async function DashboardOverviewContent() {
     listStaffMembers(business.id),
   ]);
 
+  const isNewBusiness =
+    services.length === 0 && staffMembers.length === 0 && customers.length === 0;
+
   return (
     <div className="flex flex-col gap-6">
+      {isNewBusiness && <GettingStartedCard />}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <MetricCard
           label="Conversaciones activas"

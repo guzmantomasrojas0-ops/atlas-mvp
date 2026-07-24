@@ -161,3 +161,52 @@ test.describe.serial("Dashboard", () => {
     await expect(page).toHaveURL("/login");
   });
 });
+
+// .serial: comparte el mismo negocio (sin servicios/equipo/clientes) entre tests.
+test.describe.serial("Dashboard — negocio nuevo sin datos", () => {
+  test.beforeEach(async () => {
+    await resetAll();
+    await withDb(async (client) => {
+      await client.query(
+        `INSERT INTO businesses (id, name, phone, address, timezone, "businessType", "createdAt", "updatedAt")
+         VALUES ('dash-e2e-empty-business', 'Barbería Nueva E2E', '+57 300 000 0000', 'Calle Falsa 123', 'America/Bogota', 'BARBERSHOP', now(), now())`,
+      );
+    });
+  });
+
+  test.afterEach(async () => {
+    await resetAll();
+  });
+
+  test("muestra la tarjeta de primeros pasos cuando el negocio no tiene servicios, equipo ni clientes", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await loginAsUser(context, baseURL!, "dash-e2e-empty-business");
+    await page.goto("/dashboard");
+
+    await expect(page.getByRole("heading", { name: "Empieza a usar ATLAS" })).toBeVisible();
+
+    await page.getByRole("link", { name: "Crea tu primer servicio" }).click();
+    await expect(page).toHaveURL("/dashboard/services");
+  });
+
+  test("la tarjeta de primeros pasos desaparece en cuanto el negocio tiene datos", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await withDb(async (client) => {
+      await client.query(
+        `INSERT INTO services (id, "businessId", name, price, "durationMinutes", "createdAt", "updatedAt")
+         VALUES ('dash-e2e-empty-service', 'dash-e2e-empty-business', 'Corte de pelo', 25000, 30, now(), now())`,
+      );
+    });
+
+    await loginAsUser(context, baseURL!, "dash-e2e-empty-business");
+    await page.goto("/dashboard");
+
+    await expect(page.getByRole("heading", { name: "Empieza a usar ATLAS" })).toHaveCount(0);
+  });
+});
