@@ -64,8 +64,9 @@ Empleado digital para negocios locales (barberías, salones, clínicas). Ver [PL
 
 | Variable | Obligatoria | Qué hace |
 |---|---|---|
-| `DATABASE_URL` | Sí | Conexión a Postgres. Debe incluir `options=-c%20TimeZone%3DUTC` — sin esto, `Timestamptz` se lee/escribe corrido por el offset de la sesión (ver comentario en `.env.example`). |
-| `SHADOW_DATABASE_URL` | Sí (para `prisma migrate`) | Base vacía separada que Prisma usa para calcular diffs de migración. |
+| `DATABASE_URL` | Sí | Conexión a Postgres. Debe incluir `options=-c%20TimeZone%3DUTC` — sin esto, `Timestamptz` se lee/escribe corrido por el offset de la sesión (ver comentario en `.env.example`). En producción sobre un proveedor con connection pooling (Neon, Supabase), esta debe ser la cadena **pooleada** — la usa el runtime de la app. |
+| `DIRECT_DATABASE_URL` | Solo en producción con pooling | Cadena de conexión **directa** (sin pooler), usada solo por `prisma migrate deploy` — las migraciones no son confiables a través de un pooler en modo transacción. Sin definir, cae en `DATABASE_URL` (correcto en local, donde no hay pooling). Ver [docs/operations/DEPLOYMENT.md](./docs/operations/DEPLOYMENT.md). |
+| `SHADOW_DATABASE_URL` | Sí en desarrollo (para `prisma migrate dev`) | Base vacía separada que Prisma usa para calcular diffs de migración nueva. `migrate deploy` (lo que corre en CI/producción) no la usa — no hace falta en Vercel. |
 | `AI_PROVIDER` | No (default `"openai"`) | `"openai" \| "anthropic" \| "gemini"`. Solo `"anthropic"` está implementado de verdad hoy — los otros dos devuelven una respuesta simulada. |
 | `ANTHROPIC_API_KEY` | Solo si `AI_PROVIDER="anthropic"` | Key de [console.anthropic.com](https://console.anthropic.com/). Sin ella, el provider tira `MissingCredentialsError` recién al usarse, no al arrancar. |
 | `WHATSAPP_ACCESS_TOKEN` | Solo para WhatsApp real | Token de la app de Meta (permiso `whatsapp_business_messaging`). |
@@ -73,6 +74,8 @@ Empleado digital para negocios locales (barberías, salones, clínicas). Ver [PL
 | `WHATSAPP_VERIFY_TOKEN` | Solo para WhatsApp real | String propio, usado en el handshake `GET` del webhook. |
 | `WHATSAPP_APP_SECRET` | Solo para WhatsApp real | Valida la firma HMAC-SHA256 (`X-Hub-Signature-256`) que Meta manda en cada webhook — sin esto no se puede confirmar que un webhook realmente vino de Meta. |
 | `CRON_SECRET` | Sí, en cuanto haya notificaciones en producción | Autentica `POST /api/cron/notifications`. Sin configurar, el endpoint responde `500` y no ejecuta nada (falla cerrado). |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | No | Monitoreo de errores. Sin definir, `Sentry.init` queda deshabilitado (no rompe nada, no es obligatorio para desarrollar). Ver [docs/operations/MONITORING.md](./docs/operations/MONITORING.md). |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Solo para que el build suba source maps a Sentry. Sin `SENTRY_AUTH_TOKEN`, ese paso se salta automáticamente. |
 
 Todas las credenciales externas (Anthropic, WhatsApp) fallan **al usarse**, no al arrancar la app — así el resto del sistema sigue funcionando aunque un proveedor no esté configurado todavía.
 
@@ -235,8 +238,10 @@ Con un Postgres real y persistente: reiniciar no borra datos, `prisma migrate de
 
 `notifications/` decide CUÁNDO enviar (recordatorio 24h antes, recordatorio 2h antes, agradecimiento después de la cita) y delega el envío en sí a `messaging/` — nunca duplica la llamada a la API de WhatsApp. No hay ningún proceso corriendo en segundo plano dentro de Next.js: quien dispara la corrida es un llamado externo a `POST /api/cron/notifications` con el header `Authorization: Bearer $CRON_SECRET`.
 
-- **En Vercel**: `vercel.json` ya declara el cron (cada 15 minutos). Vercel agrega ese header automáticamente usando la variable de entorno `CRON_SECRET` del proyecto — no hace falta configurar nada más.
-- **Fuera de Vercel**: cualquier cron externo (cron de sistema, GitHub Actions, un servicio de monitoreo) puede invocar el mismo endpoint:
+- **Disparador principal — GitHub Actions** (`.github/workflows/notifications-cron.yml`): corre cada 15 minutos, la granularidad real que necesitan los recordatorios de 24h/2h. No depende del plan de Vercel — gratis e ilimitado en un repo público. Se activa configurando la variable de repo `PRODUCTION_URL` (Settings → Secrets and variables → Actions → Variables) y el secreto `CRON_SECRET`; sin `PRODUCTION_URL`, el job se salta limpio (no falla).
+- **Respaldo — Cron nativo de Vercel** (`vercel.json`): una corrida diaria, no cada 15 minutos. **Importante**: el plan Hobby de Vercel limita cualquier cron a como máximo una corrida por día — un schedule más frecuente ahí falla el deploy directamente, no solo se degrada (ver [docs/operations/DEPLOYMENT.md](./docs/operations/DEPLOYMENT.md)). Es un respaldo de una sola pasada por si el workflow de GitHub Actions tuviera una interrupción, no el mecanismo principal.
+- Correr ambos a la vez es seguro: `runDueNotifications` es idempotente (constraint único `appointmentId+type+targetAt` en `AppointmentNotification`), nunca duplica un envío ya resuelto.
+- Cualquier otro cron externo puede invocar el mismo endpoint:
   ```bash
   curl -X POST https://tu-dominio/api/cron/notifications \
     -H "Authorization: Bearer $CRON_SECRET"
@@ -246,14 +251,43 @@ Sin `CRON_SECRET` configurado, el endpoint responde `500` y no ejecuta nada (fal
 
 **Limitación conocida (WhatsApp)**: Meta solo permite enviar mensajes de plantilla fuera de la ventana de 24h de servicio al cliente; un recordatorio o agradecimiento que caiga fuera de esa ventana necesita una plantilla pre-aprobada por Meta, no texto libre. Ver el Informe de Production Readiness para el detalle.
 
-## Despliegue (Vercel)
+## CI/CD
 
-1. Conectar el repo en Vercel. `vercel.json` ya declara el cron de notificaciones — no requiere configuración adicional para eso.
-2. Configurar en el proyecto de Vercel todas las [variables de entorno](#variables-de-entorno) que apliquen (`DATABASE_URL` apuntando a Postgres administrado en producción, `AI_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`, las cuatro `WHATSAPP_*` si se usa WhatsApp real, `CRON_SECRET`). `SHADOW_DATABASE_URL` solo hace falta en desarrollo (para generar migraciones), no en producción.
-3. Aplicar las migraciones contra la base de producción antes o durante el deploy: `npx prisma migrate deploy` (no `migrate dev` — ese genera migraciones nuevas, no solo las aplica).
-4. Build: `npm run build` (Vercel lo corre automáticamente). El middleware de sesión corre en el Edge Runtime; el resto de la app en el runtime de Node (Prisma lo requiere).
+`.github/workflows/ci.yml` corre en cada push/PR contra `master`: typecheck,
+lint, format check, chequeo de drift de schema, aplica migraciones contra una
+base Postgres fresca, Vitest, build, y Playwright E2E completo. Ver
+[docs/operations/RUNBOOK.md](./docs/operations/RUNBOOK.md) para el único paso
+manual que falta (activar "require status checks" en la protección de la
+rama — requiere acceso de owner al repo en GitHub, no se puede hacer desde
+código).
 
-**No hay CI configurado todavía** (sin GitHub Actions ni equivalente) — `typecheck`/`lint`/`test`/`test:e2e` se corren manualmente antes de cada sprint. Ver el Informe de Production Readiness para esta y otras piezas de deuda técnica pendientes antes de operar con datos reales de clientes.
+## Despliegue (Vercel + Neon)
+
+Guía paso a paso completa, con capturas de dónde sacar cada valor, en
+[docs/operations/DEPLOYMENT.md](./docs/operations/DEPLOYMENT.md). Resumen:
+
+1. Crear el proyecto en [Neon](https://neon.tech) y guardar las dos cadenas
+   de conexión que da (pooleada y directa — ver `DIRECT_DATABASE_URL` arriba).
+2. Crear el proyecto en Vercel, importar este repo, y cargar TODAS las
+   [variables de entorno](#variables-de-entorno) que apliquen antes del
+   primer deploy (no después — `prisma migrate deploy` corre como parte del
+   build, ver paso 3, y necesita `DATABASE_URL`/`DIRECT_DATABASE_URL` ya
+   configuradas).
+3. `npm run build` ya incluye `prisma migrate deploy` (ver `package.json`) —
+   no es un paso manual aparte. `postinstall` corre `prisma generate`
+   automáticamente en cada `npm install` (necesario: `src/generated/prisma`
+   no se versiona en git).
+4. Activar el workflow de notificaciones (`.github/workflows/notifications-cron.yml`)
+   configurando la variable de repo `PRODUCTION_URL` con el dominio real.
+5. Configurar el webhook de WhatsApp en Meta apuntando a
+   `https://tu-dominio/api/webhooks/whatsapp`, y (opcional pero recomendado)
+   crear el proyecto de Sentry — ambos con instrucciones exactas en
+   `DEPLOYMENT.md`.
+
+Ver también [docs/operations/BACKUP.md](./docs/operations/BACKUP.md) (backups
++ PITR), [RECOVERY.md](./docs/operations/RECOVERY.md) (qué hacer si algo se
+rompe) y [MONITORING.md](./docs/operations/MONITORING.md) (Sentry,
+observabilidad).
 
 ## Troubleshooting
 

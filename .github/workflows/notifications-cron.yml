@@ -1,0 +1,37 @@
+name: Notifications Cron
+
+# Dispara POST /api/cron/notifications cada 15 minutos — la granularidad real
+# que necesitan los recordatorios (24h antes, 2h antes, ver
+# modules/notifications). El Cron nativo de Vercel (vercel.json) NO puede
+# cubrir esto en el plan Hobby: ahí Vercel limita cualquier cron a como
+# máximo una corrida por día, y un cron más frecuente falla el deploy
+# directamente (no solo se degrada). Este workflow corre en GitHub Actions
+# (gratis e ilimitado en minutos para un repo público) y no depende de qué
+# plan de Vercel se use — ver docs/operations/DEPLOYMENT.md.
+#
+# Convive a propósito con el cron diario de vercel.json: ese es un respaldo
+# de una sola corrida por día por si este workflow tuviera una interrupción
+# (un outage de GitHub Actions, un secret vencido, etc.) — nunca duplica un
+# envío real porque runDueNotifications() es idempotente por diseño
+# (constraint único appointmentId+type+targetAt, ver
+# modules/notifications/data/notification-repository.ts).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    name: Trigger notifications endpoint
+    runs-on: ubuntu-latest
+    # Sin la variable PRODUCTION_URL configurada (Settings → Secrets and
+    # variables → Actions → Variables), este job se salta limpio (no falla en
+    # rojo) — así el workflow puede vivir en el repo desde antes de tener una
+    # URL de producción real, sin generar ruido en la pestaña Actions.
+    if: ${{ vars.PRODUCTION_URL != '' }}
+    steps:
+      - name: POST /api/cron/notifications
+        run: |
+          curl --fail-with-body -sS -X POST \
+            "${{ vars.PRODUCTION_URL }}/api/cron/notifications" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

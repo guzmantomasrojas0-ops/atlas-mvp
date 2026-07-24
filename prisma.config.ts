@@ -10,7 +10,15 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // `DIRECT_DATABASE_URL` solo se define en producción sobre un Postgres
+    // con connection pooling externo (Neon, Supabase, PgBouncer) — el pool de
+    // conexiones no soporta bien las sentencias DDL de una migración. El
+    // runtime de la app (src/lib/db.ts) siempre usa el `DATABASE_URL` normal
+    // (la conexión pooleada) directamente, sin pasar por acá — este archivo
+    // solo alimenta a la CLI de Prisma (migrate, generate, db push, studio).
+    // En local/CI, donde no hay pooling, `DIRECT_DATABASE_URL` no existe y
+    // cae en `DATABASE_URL` sin cambiar nada (ver docs/operations/DEPLOYMENT.md).
+    url: process.env["DIRECT_DATABASE_URL"] ?? process.env["DATABASE_URL"],
     shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

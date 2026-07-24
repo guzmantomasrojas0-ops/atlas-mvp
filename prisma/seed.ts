@@ -213,6 +213,20 @@ async function seedConversations(
 }
 
 async function main() {
+  // Crea una cuenta OWNER con una contraseña fija y pública
+  // ("atlas-dev-2026", ver ensureOwnerAccount más abajo) — un backdoor de
+  // login real si esto llegara a correr contra producción. No hay ningún
+  // escenario legítimo para sembrar datos de demo ahí: los negocios reales
+  // se dan de alta con su propia cuenta desde el flujo de Business Setup.
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "prisma/seed.ts: NODE_ENV=production — cancelado. Este seed crea una cuenta " +
+        "con contraseña pública fija, pensada solo para desarrollo local.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const business = await ensureBusiness();
   await ensureOwnerAccount(business.id);
   const { services, staffMembers } = await ensureCatalog(business.id);

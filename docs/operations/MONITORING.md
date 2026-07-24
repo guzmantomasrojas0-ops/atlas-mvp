@@ -5,11 +5,13 @@ algún lado.
 
 ## Qué está cableado (funciona hoy, sin cuenta de Sentry)
 
-- `@sentry/nextjs` está instalado y configurado en los tres runtimes que usa
-  Next.js: cliente (`src/instrumentation-client.ts`), servidor
-  (`src/sentry.server.config.ts`) y edge (`src/sentry.edge.config.ts`,
-  usado por `src/middleware.ts`). El registro de los tres corre desde
-  `src/instrumentation.ts`, el hook nativo de Next.js.
+- `@sentry/nextjs` está instalado y configurado en dos runtimes: cliente
+  (`src/instrumentation-client.ts`) y servidor (`src/sentry.server.config.ts`).
+  El registro corre desde `src/instrumentation.ts`, el hook nativo de
+  Next.js. **Deliberadamente no se instrumenta el runtime Edge** (el que usa
+  `src/middleware.ts`) — ver la sección siguiente, es una decisión revertida
+  a propósito dentro de este mismo Sprint, no un runtime sin cubrir por
+  descuido.
 - `src/instrumentation.ts` también expone `onRequestError`, que Next.js llama
   automáticamente ante cualquier excepción no manejada en Server Components,
   Route Handlers o Server Actions.
@@ -134,12 +136,33 @@ los logs de una corrida real, no solo revisando el código.
   dentro de la propia app (`/dashboard/analytics`, Sprint 23), no es parte
   de Sentry.
 
-## Costo de agregar esto
+## Por qué no hay instrumentación de Edge (decisión revertida en este Sprint)
 
-Medido en este Sprint, no estimado: el bundle compartido de First Load JS
-subió de 102 kB a 184 kB, y el bundle de Middleware de 34 kB a 99 kB, al
-agregar los SDKs de cliente/edge de Sentry. Es un costo real de performance
-a cambio de visibilidad de errores — ver la sección de Performance del
-Production Readiness Report para el análisis completo y si vale la pena
-ajustar qué se manda al cliente (ej. deshabilitar el tracing del cliente y
-quedarse solo con captura de errores, que pesa bastante menos).
+Se instaló inicialmente en los tres runtimes (cliente, servidor, edge). Medido
+con un build real: el bundle de Middleware pasó de 34 kB a 99 kB (+191%) solo
+por importar el SDK edge de Sentry en `src/instrumentation.ts`, porque
+Next.js empaqueta la instrumentación de Edge junto con `src/middleware.ts` —
+no son procesos separados ahí, como sí lo son Node vs Edge en el server.
+
+`src/middleware.ts` completo son 6 líneas: comprobar si existe una cookie y
+redirigir si no. No hay nada ahí con una superficie de fallo interesante para
+Sentry — la validación real de sesión (que sí puede fallar de formas que
+importa capturar) vive en `requireSession()`, que corre en Node y ya está
+cubierta por `sentry.server.config.ts`. Pagar +65 kB en **cada request a
+`/dashboard/*`** para instrumentar una función que nunca tira nada
+interesante no se justificaba, así que se sacó: `src/sentry.edge.config.ts`
+se borró y `src/instrumentation.ts` ya no lo importa. Verificado con un
+rebuild real: Middleware bajó a 44.9 kB (los ~11 kB restantes sobre el
+baseline original de 34 kB son overhead propio del runtime Edge de
+Next.js/React 19 en este momento, no de Sentry).
+
+## Costo de agregar esto (cliente + servidor, medido)
+
+El bundle compartido de First Load JS subió de 102 kB a 184 kB al agregar los
+SDKs de cliente/servidor de Sentry (el server no afecta el bundle del
+cliente, así que ese delta es enteramente `instrumentation-client.ts`). Es un
+costo real de performance a cambio de visibilidad de errores en la UI del
+Dashboard — ver la sección de Performance del Production Readiness Report
+para si vale la pena bajarlo más (ej. deshabilitar el tracing del cliente y
+quedarse solo con captura de errores, que pesa menos que Performance +
+Session Replay si estuviera activado).
