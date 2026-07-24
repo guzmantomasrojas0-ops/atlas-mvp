@@ -107,6 +107,11 @@ model StaffMember {
   /// Rol dentro del negocio, texto libre (ej. "Barbero", "Estilista",
   /// "Recepcionista") — no es un enum porque varía demasiado entre verticales.
   role       String
+  /// Un miembro inactivo ya no aparece para elegir en reservas nuevas (ni
+  /// desde el Dashboard ni desde el agente de IA), pero conserva su historial
+  /// de citas — desactivar es la alternativa a borrar cuando ya tiene
+  /// reservas asociadas (borrar fallaría por la FK RESTRICT de Appointment).
+  active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -337,12 +342,21 @@ model Conversation {
 
 /// Un mensaje individual dentro de una conversación.
 model Message {
-  id             String        @id @default(cuid())
-  conversationId String
-  conversation   Conversation  @relation(fields: [conversationId], references: [id])
-  sender         MessageSender
-  content        String
-  createdAt      DateTime      @default(now())
+  id                String        @id @default(cuid())
+  conversationId    String
+  conversation      Conversation  @relation(fields: [conversationId], references: [id])
+  sender            MessageSender
+  content           String
+  /// El id que el canal externo le puso a este mensaje entrante (ej. el
+  /// `wamid.` de WhatsApp Cloud API) — solo se guarda para mensajes CLIENT que
+  /// llegan por un webhook de canal. Es la clave de idempotencia real: Meta
+  /// puede reintentar la entrega del mismo webhook más de una vez (ver su
+  /// documentación de "at-least-once delivery"), y sin esto cada reintento
+  /// crearía un mensaje duplicado y volvería a correr el Agent sobre el mismo
+  /// texto. `@unique` (no compuesto) porque el id que manda Meta ya es único
+  /// en todo WhatsApp, no solo dentro de este negocio.
+  externalMessageId String?       @unique
+  createdAt         DateTime      @default(now())
 
   @@index([conversationId, createdAt])
   @@map("messages")
