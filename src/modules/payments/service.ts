@@ -13,6 +13,7 @@ import {
   findActivePayment,
   findAppointmentForPayment,
   listPaymentsByBusiness,
+  listPaymentsByClient,
   revertPaymentAndMarkPending,
 } from "./data";
 
@@ -128,5 +129,14 @@ export async function getAppointmentPayment(
 /** Todos los pagos de un negocio (cualquier estado), para `/dashboard/payments`. */
 export async function listPayments(businessId: string): Promise<PaymentListItem[]> {
   const payments = await listPaymentsByBusiness(businessId);
+  return payments.map(toPaymentListItem);
+}
+
+/** Todos los pagos de un cliente puntual (cualquier estado), para su historial en la ficha de Cliente. */
+export async function listPaymentsForClient(
+  businessId: string,
+  clientId: string,
+): Promise<PaymentListItem[]> {
+  const payments = await listPaymentsByClient(businessId, clientId);
   return payments.map(toPaymentListItem);
 }

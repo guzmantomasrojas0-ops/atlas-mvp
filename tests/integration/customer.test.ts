@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { createBusiness } from "@/modules/business";
 import { createService, createStaffMember } from "@/modules/catalog";
-import { listCustomers } from "@/modules/customer";
+import { findOrCreateConversation, sendMessage } from "@/modules/conversation";
+import {
+  CustomerNotFoundError,
+  getCustomerDetail,
+  listCustomers,
+  updateCustomer,
+} from "@/modules/customer";
+import { confirmPayment } from "@/modules/payments";
 
 const TIMEZONE = "America/Bogota";
 
@@ -32,6 +39,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await db.message.deleteMany({ where: { conversation: { businessId } } });
+  await db.conversation.deleteMany({ where: { businessId } });
+  await db.payment.deleteMany({ where: { businessId } });
   await db.appointment.deleteMany({ where: { businessId } });
   await db.client.deleteMany({ where: { businessId } });
   await db.service.deleteMany({ where: { businessId } });
@@ -115,5 +125,66 @@ describe("customer module — integración con Postgres real", () => {
       await db.client.deleteMany({ where: { businessId: otherBusiness.id } });
       await db.business.delete({ where: { id: otherBusiness.id } });
     }
+  });
+
+  it("getCustomerDetail agrega reservas, pagos y conversaciones del cliente", async () => {
+    const client = await db.client.create({
+      data: { businessId, name: "Cliente completo", phone: "+57 302 000 0000" },
+    });
+
+    const appointment = await db.appointment.create({
+      data: {
+        businessId,
+        staffId,
+        serviceId,
+        clientId: client.id,
+        startsAt: new Date("2026-07-24T15:00:00Z"),
+        endsAt: new Date("2026-07-24T15:30:00Z"),
+        status: "CONFIRMED",
+      },
+    });
+    await confirmPayment(businessId, appointment.id, {
+      amount: 25000,
+      currency: "USD",
+      method: "ZELLE",
+      confirmedBy: "Ana",
+    });
+    const conversation = await findOrCreateConversation(businessId, client.id, "WHATSAPP");
+    await sendMessage(businessId, conversation.id, "Hola, ¿tienen turno mañana?", "CLIENT");
+
+    const detail = await getCustomerDetail(businessId, client.id);
+
+    expect(detail).not.toBeNull();
+    expect(detail).toMatchObject({ id: client.id, name: "Cliente completo" });
+    expect(detail?.appointments).toHaveLength(1);
+    expect(detail?.appointments[0]).toMatchObject({ id: appointment.id, paymentStatus: "PAID" });
+    expect(detail?.payments).toHaveLength(1);
+    expect(detail?.payments[0]).toMatchObject({ status: "CONFIRMED", amount: 25000 });
+    expect(detail?.conversations).toHaveLength(1);
+    expect(detail?.conversations[0]).toMatchObject({ id: conversation.id, channel: "WHATSAPP" });
+  });
+
+  it("getCustomerDetail devuelve null si el cliente no existe o es de otro negocio", async () => {
+    const detail = await getCustomerDetail(businessId, "no-existe");
+    expect(detail).toBeNull();
+  });
+
+  it("updateCustomer actualiza nombre y teléfono", async () => {
+    const client = await db.client.create({
+      data: { businessId, name: "Nombre viejo", phone: "+57 300 000 0000" },
+    });
+
+    const updated = await updateCustomer(businessId, client.id, {
+      name: "Nombre nuevo",
+      phone: "+57 301 111 1111",
+    });
+
+    expect(updated).toMatchObject({ name: "Nombre nuevo", phone: "+57 301 111 1111" });
+  });
+
+  it("updateCustomer tira CustomerNotFoundError si el id no existe o es de otro negocio", async () => {
+    await expect(
+      updateCustomer(businessId, "no-existe", { name: "Nombre válido", phone: "" }),
+    ).rejects.toThrow(CustomerNotFoundError);
   });
 });

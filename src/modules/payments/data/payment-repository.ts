@@ -84,3 +84,12 @@ export function listPaymentsByBusiness(businessId: string) {
     orderBy: { createdAt: "desc" },
   });
 }
+
+/** Todos los pagos de un cliente puntual (cualquier estado) — para su historial en la ficha de Cliente. */
+export function listPaymentsByClient(businessId: string, clientId: string) {
+  return db.payment.findMany({
+    where: { businessId, appointment: { clientId } },
+    include: { appointment: { include: { client: true, service: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}

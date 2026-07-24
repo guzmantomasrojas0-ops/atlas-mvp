@@ -21,3 +21,26 @@ export function CustomersSkeleton() {
     </Card>
   );
 }
+
+export function CustomerDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+      </div>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Card key={index} className="shadow-floating p-6">
+          <Skeleton className="h-4 w-36" />
+          <div className="mt-4 flex flex-col gap-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}

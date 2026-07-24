@@ -1,4 +1,5 @@
 import { UsersRound } from "lucide-react";
+import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -15,7 +16,7 @@ export function CustomerTable({ customers }: { customers: CustomerListItem[] }) 
     return (
       <EmptyState
         icon={<UsersRound className="h-5 w-5" />}
-        title="Todavía no tenés clientes"
+        title="Todavía no tienes clientes"
         description="Los clientes aparecen acá automáticamente en cuanto agendan su primera reserva o escriben por algún canal."
       />
     );
@@ -36,11 +37,14 @@ export function CustomerTable({ customers }: { customers: CustomerListItem[] }) 
           <tbody className="divide-border divide-y">
             {customers.map((customer) => (
               <tr key={customer.id} className="hover:bg-muted/60 transition-colors duration-150">
-                <td className="px-6 py-3.5">
-                  <div className="flex items-center gap-3">
+                <td className="p-0">
+                  <Link
+                    href={`/dashboard/customers/${customer.id}`}
+                    className="focus-visible:ring-brand-600 flex items-center gap-3 px-6 py-3.5 outline-none focus-visible:ring-2 focus-visible:-outline-offset-2"
+                  >
                     <Avatar id={customer.id} name={customer.name} size="sm" />
                     <span className="text-foreground font-medium">{customer.name}</span>
-                  </div>
+                  </Link>
                 </td>
                 <td className="text-muted-foreground px-6 py-3.5">{customer.phone ?? "—"}</td>
                 <td className="text-muted-foreground px-6 py-3.5">{customer.appointmentCount}</td>
