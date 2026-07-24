@@ -137,6 +137,72 @@ describe("runConversationLoop", () => {
     expect(roles).toEqual(["user", "assistant", "tool", "assistant"]);
   });
 
+  it("ejecuta en paralelo, no en serie, cuando el modelo pide varias tools en la misma respuesta", async () => {
+    const DELAY_MS = 50;
+    const slowTool: Tool = {
+      name: "FIND_SERVICE",
+      description: "Tool de prueba lenta.",
+      inputSchema: z.object({ query: z.string().optional() }),
+      execute: async (input) => {
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+        return { echoed: input };
+      },
+    };
+    const otherSlowTool: Tool = {
+      name: "FIND_STAFF",
+      description: "Otra tool de prueba lenta.",
+      inputSchema: z.unknown(),
+      execute: async () => {
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+        return { ok: true };
+      },
+    };
+
+    const response: CompletionResponse = {
+      message: {
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          { id: "call-1", name: "FIND_SERVICE", arguments: { query: "corte" } },
+          { id: "call-2", name: "FIND_STAFF", arguments: {} },
+        ],
+      },
+      toolCalls: [
+        { id: "call-1", name: "FIND_SERVICE", arguments: { query: "corte" } },
+        { id: "call-2", name: "FIND_STAFF", arguments: {} },
+      ],
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      finishReason: "tool_calls",
+    };
+    const model = scriptedModel([response, textResponse("Listo.")]);
+
+    const startedAt = Date.now();
+    const result = await runConversationLoop(
+      [{ role: "user", content: "hola" }],
+      baseDeps(model, registryWith(slowTool, otherSlowTool)),
+    );
+    const elapsedMs = Date.now() - startedAt;
+
+    // Si corrieran en serie tardarían >= 2 * DELAY_MS. En paralelo, bastante
+    // menos que eso (con margen generoso para no ser un test flaky por CI lento).
+    expect(elapsedMs).toBeLessThan(DELAY_MS * 2);
+
+    expect(result.steps).toHaveLength(2);
+    expect(result.steps[0]).toMatchObject({
+      toolName: "FIND_SERVICE",
+      result: { success: true, payload: { echoed: { query: "corte" } } },
+    });
+    expect(result.steps[1]).toMatchObject({
+      toolName: "FIND_STAFF",
+      result: { success: true, payload: { ok: true } },
+    });
+
+    // El orden de los tool_result en el historial respeta el orden en que el
+    // modelo pidió las tools, no el orden en que terminaron de resolver.
+    const toolMessages = result.messages.filter((m) => m.role === "tool");
+    expect(toolMessages.map((m) => m.toolCallId)).toEqual(["call-1", "call-2"]);
+  });
+
   it("aplica los defaults de contexto sobre el input que manda el modelo antes de ejecutar", async () => {
     const model = scriptedModel([
       toolCallResponse("FIND_SERVICE", { query: "corte" }),

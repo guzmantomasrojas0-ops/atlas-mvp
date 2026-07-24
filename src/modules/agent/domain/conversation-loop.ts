@@ -121,19 +121,41 @@ export async function runConversationLoop(
 
     messages.push(response.message);
 
+    // El conteo de repetidas se resuelve entero, de forma síncrona, ANTES de
+    // ejecutar ninguna tool de esta tanda — así una tool que se pasa del
+    // límite corta el turno completo (mismo resultado observable que antes:
+    // ninguna tool de acá en más se ejecuta), pero sin que el orden de
+    // resolución de las promesas de abajo pueda afectar el conteo.
+    let repeated = false;
     for (const toolCall of response.toolCalls) {
       const signature = toolCallSignature(toolCall.name, toolCall.arguments);
       const timesSeen = (toolCallCounts.get(signature) ?? 0) + 1;
-
       if (timesSeen > limits.maxRepeatedToolCalls) {
-        return { response: null, steps, stopReason: "repeated_tool_call", messages, usage };
+        repeated = true;
+        break;
       }
       toolCallCounts.set(signature, timesSeen);
+    }
+    if (repeated) {
+      return { response: null, steps, stopReason: "repeated_tool_call", messages, usage };
+    }
 
-      const input = applyToolContextDefaults(toolCall.name, toolCall.arguments, deps.context);
-      const executionResult = await executeTool(toolCall.name, input, deps.toolRegistry);
+    // Las tools que el modelo pidió en esta misma respuesta son independientes
+    // entre sí (nunca la segunda depende del resultado de la primera — si
+    // dependiera, el modelo la pediría en una vuelta posterior, ya con el
+    // resultado de la anterior en el historial) — correrlas en paralelo
+    // achica la latencia de un turno que encadena, por ejemplo,
+    // FIND_SERVICE + GET_BUSINESS_HOURS, sin cambiar ningún resultado.
+    const results = await Promise.all(
+      response.toolCalls.map(async (toolCall) => {
+        const input = applyToolContextDefaults(toolCall.name, toolCall.arguments, deps.context);
+        const executionResult = await executeTool(toolCall.name, input, deps.toolRegistry);
+        return { toolCall, input, executionResult };
+      }),
+    );
+
+    for (const { toolCall, input, executionResult } of results) {
       steps.push({ toolName: toolCall.name, input, result: executionResult });
-
       messages.push(toolResultToChatMessage(toAiToolResult(toolCall.id, executionResult)));
     }
   }
