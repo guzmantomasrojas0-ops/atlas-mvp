@@ -27,7 +27,37 @@ async function resetAll() {
   });
 }
 
+/**
+ * Bogotá es UTC-5 fijo (sin horario de verano) — construye el instante UTC
+ * correspondiente a "hoy, hora:minuto en Bogotá", sin depender de la zona
+ * horaria de la máquina donde corre el test. Mismo patrón que
+ * appointments.spec.ts — usar siempre "hoy a una hora fija dentro del
+ * horario comercial" (nunca un offset relativo tipo "now() + 1 hora") es lo
+ * que garantiza que la cita quede dentro de la grilla visible. Un offset
+ * relativo cae fuera del horario comercial (8am-8pm) según a qué hora del
+ * día corra el test — se descubrió este Sprint que el CI real, corriendo de
+ * madrugada en UTC, hace que "now() + 1 hora" caiga a la 1am en Bogotá,
+ * dejando el botón de la cita posicionado fuera del viewport del grid
+ * (Playwright lo encuentra pero nunca puede hacerle click) — no era un bug
+ * de la app, era este seed asumiendo que "ahora" siempre cae en horario
+ * comercial.
+ */
+function bogotaTodayAt(hour: number, minute: number): Date {
+  const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  return new Date(
+    Date.UTC(
+      nowBogota.getUTCFullYear(),
+      nowBogota.getUTCMonth(),
+      nowBogota.getUTCDate(),
+      hour + 5,
+      minute,
+    ),
+  );
+}
+
 async function seedAppointment() {
+  const startsAt = bogotaTodayAt(11, 0);
+  const endsAt = bogotaTodayAt(11, 30);
   await withDb(async (client) => {
     await client.query(
       `INSERT INTO businesses (id, name, phone, address, timezone, "businessType", "createdAt", "updatedAt")
@@ -47,7 +77,8 @@ async function seedAppointment() {
     );
     await client.query(
       `INSERT INTO appointments (id, "businessId", "staffId", "serviceId", "clientId", "startsAt", "endsAt", status, "createdAt", "updatedAt")
-       VALUES ('pay-e2e-appointment', 'pay-e2e-business', 'pay-e2e-staff', 'pay-e2e-service', 'pay-e2e-client', now() + interval '1 hour', now() + interval '1 hour 30 minutes', 'CONFIRMED', now(), now())`,
+       VALUES ('pay-e2e-appointment', 'pay-e2e-business', 'pay-e2e-staff', 'pay-e2e-service', 'pay-e2e-client', $1, $2, 'CONFIRMED', now(), now())`,
+      [startsAt, endsAt],
     );
   });
 }

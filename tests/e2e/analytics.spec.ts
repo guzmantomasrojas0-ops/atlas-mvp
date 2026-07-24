@@ -27,7 +27,29 @@ async function resetAll() {
   });
 }
 
+/**
+ * Bogotá es UTC-5 fijo (sin horario de verano) — construye el instante UTC
+ * correspondiente a "hoy, hora:minuto en Bogotá". Mismo patrón que
+ * appointments.spec.ts/payments.spec.ts/dashboard.spec.ts: un offset
+ * relativo tipo "now() + 1 hora" cae fuera del horario comercial (8am-8pm)
+ * según a qué hora del día corra el test.
+ */
+function bogotaTodayAt(hour: number, minute: number): Date {
+  const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  return new Date(
+    Date.UTC(
+      nowBogota.getUTCFullYear(),
+      nowBogota.getUTCMonth(),
+      nowBogota.getUTCDate(),
+      hour + 5,
+      minute,
+    ),
+  );
+}
+
 async function seedFixtures() {
+  const startsAt = bogotaTodayAt(11, 0);
+  const endsAt = bogotaTodayAt(11, 30);
   await withDb(async (client) => {
     await client.query(
       `INSERT INTO businesses (id, name, phone, address, timezone, "businessType", "createdAt", "updatedAt")
@@ -47,7 +69,8 @@ async function seedFixtures() {
     );
     await client.query(
       `INSERT INTO appointments (id, "businessId", "staffId", "serviceId", "clientId", "startsAt", "endsAt", status, "paymentStatus", "createdAt", "updatedAt")
-       VALUES ('ana-e2e-appointment', 'ana-e2e-business', 'ana-e2e-staff', 'ana-e2e-service', 'ana-e2e-client', now() + interval '1 hour', now() + interval '1 hour 30 minutes', 'CONFIRMED', 'PENDING', now(), now())`,
+       VALUES ('ana-e2e-appointment', 'ana-e2e-business', 'ana-e2e-staff', 'ana-e2e-service', 'ana-e2e-client', $1, $2, 'CONFIRMED', 'PENDING', now(), now())`,
+      [startsAt, endsAt],
     );
   });
 }
